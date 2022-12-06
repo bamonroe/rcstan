@@ -36,7 +36,7 @@ parameters {
   real um;
   // parameters for the standard deviation of each of r, phi, eta, and mu
   real<lower = 0> rs;
-  real us;
+  real<lower = 0> us;
 
   // Arrays of parameters for each subject. Each arrary keeps N parameters, N
   // being the number of subjects
@@ -60,7 +60,6 @@ model {
   real dw21;
   real dw22;
   real dw23;
-
 
   // Hyper Prior Distributions
   // r mean and standard deviation
