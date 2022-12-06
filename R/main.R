@@ -1,7 +1,8 @@
 avail_mods <- function() {
   list(
     eut    = c(bhm = TRUE, plain = FALSE),
-    prelec = c(bhm = TRUE, plain = TRUE)
+    prelec = c(bhm = TRUE, plain = TRUE),
+    power  = c(bhm = TRUE, plain = FALSE)
   )
 }
 
