@@ -6,10 +6,12 @@ Authors@R:
            comment = c(ORCID = "0000-0003-0830-9793"))
 Description: This package takes in standardized datasets and passes them into pre-coded STAN models for estimation with Bayesian HMC.
 License: MIT + file LICENSE
+Additional_repositories: https://mc-stan.org/r-packages/
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.2
 Imports:
+    StanHeaders,
     rstan,
 		haven
 Config/testthat/edition: 3
