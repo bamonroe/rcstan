@@ -1,23 +1,17 @@
-avail_mods <- function() {
-  list(
-    eut    = c(bhm = TRUE, plain = FALSE),
-    prelec = c(bhm = TRUE, plain = TRUE),
-    power  = c(bhm = TRUE, plain = FALSE)
-  )
+mod_map <- function(i) {
+  c(
+    "eut_bhm",
+    "power_bhm",
+    "rw_bhm"
+  )[i]
 }
-
 
 #' @title Get the raw stan code
 #' @param mod the name of the PWF function
 #' @param bhm boolean, TRUE indicating to use the BHM model
 #' @export
-get_stan_code <- function(mod = "eut", bhm = TRUE) {
-
-  if (bhm) {
-    fname <- paste0(mod, "_bhm.stan")
-  } else {
-    fname <- paste0(mod, ".stan")
-  }
+get_stan_code <- function(mod_num = 1) {
+  fname <- paste0(mod_map(mod_num), "_bhm.stan")
   system.file(package = "rcstan", fname)
 }
 
@@ -45,13 +39,13 @@ check_dat <- function(dat) {
 #' @title Esimate the Stan model
 #' @param dat the name of the stan file
 #' @export
-run_stan <- function(dat, mod = "eut", bhm = TRUE, stan_opts = list()) {
+run_stan <- function(dat, mod_num = 1, stan_opts = list()) {
 
   # Make sure the dat passes the checks
   check_dat(dat)
 
   # Get the file for the stan code
-  fname <- get_stan_code(mod, bhm)
+  fname <- get_stan_code(mod_num)
 
   # The number of subjects in this dataset
   nsubs <- length(unique(dat$ID))
@@ -127,13 +121,14 @@ flatten_fit <- function(fit) {
 
 #' Fit a model, flatten it, and write to dta
 #' @export
-fit_to_dta <- function(infile, outfile = "post.dta", mod = "eut", bhm = TRUE, stan_opts = list()) {
+fit_to_dta <- function(infile, outfile = "post.dta", mod_num = 1, stan_opts = list()) {
 
   # Read in the stata dataset
   dat <- as.data.frame(haven::read_dta(infile))
 
   # Fit the Stan model
-  fit <- run_stan(dat, mod = mod, bhm = bhm, stan_opts = stan_opts)
+  fit <- run_stan(dat, mod_num = mod_num, stan_opts = stan_opts)
+
   # Flatten it to a single matrix
   fit <- flatten_fit(fit)
 
