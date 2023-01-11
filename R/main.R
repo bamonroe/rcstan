@@ -11,8 +11,9 @@ mod_map <- function(i) {
 #' @param bhm boolean, TRUE indicating to use the BHM model
 #' @export
 get_stan_code <- function(mod_num = 1) {
-  fname <- paste0(mod_map(mod_num), "_bhm.stan")
-  system.file(package = "rcstan", fname)
+  fname <- paste0(mod_map(mod_num), ".stan")
+  out <- system.file(package = "rcstan", fname)
+  out
 }
 
 # The data needs some checks to make sure it'll run

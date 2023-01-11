@@ -31,15 +31,15 @@ data {
 
 parameters {
   // Hyper parameters first
-  // parameters for the mean of each of r, phi, eta, and mu
+  // parameters for the mean of each of r, a, b, and mu
   real rm;
-  real<lower = 0> aa;
-  real<lower = 0> ba;
+  real<lower = 0> am;
+  real<lower = 0> bm;
   real<lower = 0> um;
-  // parameters for the standard deviation of each of r, phi, eta, and mu
+  // parameters (proportional to) the standard deviation of each of r, phi, eta, and mu
   real<lower = 0> rs;
-  real<lower = 0> ab;
-  real<lower = 0> bb;
+  real<lower = 0> ap;
+  real<lower = 0> bp;
   real<lower = 0> us;
 
   // Arrays of parameters for each subject. Each arrary keeps N parameters, N
@@ -53,6 +53,9 @@ parameters {
 model {
 
   // Variables for subject specific parameters - this should reduce memory lookups
+  real apar;
+  real bpar;
+
   real ri;
   real ai;
   real bi;
@@ -85,20 +88,19 @@ model {
   // Hyper Prior Distributions
   // r mean and standard deviation
   target += normal_lpdf(rm | 0, 10);
-  target += inv_gamma_lpdf(rs | 10, 3);
+  target += inv_gamma_lpdf(rs | .001, .001);
 
-  // log(gamma) mean and standard deviation
-  target += inv_gamma_lpdf(aa | 0, 10);
-  target += inv_gamma_lpdf(ab | 8, 3);
+  // mu and phi for the a distribution
+  target += beta_lpdf(am | .001, .001);
+  target += inv_gamma_lpdf(ap | .001, .001);
 
-  // log(gamma) mean and standard deviation
-  target += inv_gamma_lpdf(ba | 0, 10);
-  target += inv_gamma_lpdf(bb | 8, 3);
+  // mu and phi for the b distribution
+  target += beta_lpdf(bm | .001, .001);
+  target += inv_gamma_lpdf(bp | .001, .001);
 
-  // log(mu) mean and standard deviation
+  // mu mean and standard deviation
   target += normal_lpdf(um | 0, 10);
-  target += inv_gamma_lpdf(us | 10, 3);
-
+  target += inv_gamma_lpdf(us | 0.001, 0.001);
 
   // Looping through the subjects
   for (n in 1:N) {
@@ -106,10 +108,17 @@ model {
     // CRRA prior
     target += normal_lpdf(r[n] | rm, rs);
     // PWF prior
-    target += beta_lpdf(a[n] | aa, ab);
-    target += beta_lpdf(b[n] | ba, bb);
+    // The estimates (am, ap) are the mu and phi parameterizations of the beta distribution
+    // we need to recover the alpha and beta parameters for use with the beta pdf
+    apar = am * ap;
+    bpar = (1 - am) * ap;
+    target += beta_lpdf(a[n] | apar, bpar);
+
+    apar = bm * bp;
+    bpar = (1 - bm) * bp;
+    target += beta_lpdf(b[n] | apar, bpar);
     // Fechner prior
-    target += normal_lpdf(ln_mu[n] | um, us);
+    target += normal_lpdf(mu[n] | um, us);
 
     // The parameters for subject "n"
     // Note for "r" that I'm taking (1 - r) right at the top here. This saves
@@ -117,7 +126,7 @@ model {
     ri   = 1 - r[n];
     ai   = a[n];
     bi   = b[n];
-    mui  = mu[n];
+    mui  = exp(mu[n]);
 
     // TODO:
     // Still need to add jacobian correction for variable transformations, or
@@ -145,13 +154,14 @@ model {
       pw23 = 1;
 
       // Add the probability weighting function
+      // Riegar & Wang (2006, p. 677)
       dw13 = 1;  // Must always be 1 theory-wise
-      dw12 = pw12 + (pw12^3 - (ai + 1) * pw12^2 + ai * pw12) * (3 - 3bi) / (ai^2 - ai + 1)
-      dw11 = pw11 + (pw11^3 - (ai + 1) * pw11^2 + ai * pw11) * (3 - 3bi) / (ai^2 - ai + 1)
+      dw12 = pw12 + (pw12^3 - (ai + 1) * pw12^2 + ai * pw12) * (3 - 3 * bi) / (ai^2 - ai + 1);
+      dw11 = pw11 + (pw11^3 - (ai + 1) * pw11^2 + ai * pw11) * (3 - 3 * bi) / (ai^2 - ai + 1);
 
       dw23 = 1;  // Must always be 1 theory-wise
-      dw22 = pw22 + (pw22^3 - (ai + 1) * pw22^2 + ai * pw22) * (3 - 3bi) / (ai^2 - ai + 1)
-      dw21 = pw21 + (pw21^3 - (ai + 1) * pw21^2 + ai * pw21) * (3 - 3bi) / (ai^2 - ai + 1)
+      dw22 = pw22 + (pw22^3 - (ai + 1) * pw22^2 + ai * pw22) * (3 - 3 * bi) / (ai^2 - ai + 1);
+      dw21 = pw21 + (pw21^3 - (ai + 1) * pw21^2 + ai * pw21) * (3 - 3 * bi) / (ai^2 - ai + 1);
 
       // Decumulate the probabilities
       dw13 -= dw12;
@@ -168,7 +178,7 @@ model {
       udiff -= opt2_out1[i]^ri * dw21 + opt2_out2[i]^ri * dw22 + opt2_out3[i]^ri * dw23;
 
       // Add Contextual utility
-      udiff = udiff / ((Max[i]^ri - Min[i]^ri) * mu);
+      udiff = udiff / ((Max[i]^ri - Min[i]^ri) * mui);
 
       // Logistic linking function
       udiff = 1 / (1 + exp(udiff));
