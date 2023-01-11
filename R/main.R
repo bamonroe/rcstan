@@ -1,8 +1,8 @@
 mod_map <- function(i) {
   c(
     "eut_bhm",
-    "power_bhm",
-    "rw_bhm"
+    "rdu_power_bhm",
+    "rdu_rw_bhm"
   )[i]
 }
 

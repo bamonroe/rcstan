@@ -121,6 +121,7 @@ model {
       p11 = opt1_prob1[i];
       p12 = opt1_prob2[i];
       p13 = opt1_prob3[i];
+
       p21 = opt2_prob1[i];
       p22 = opt2_prob2[i];
       p23 = opt2_prob3[i];

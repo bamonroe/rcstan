@@ -91,11 +91,11 @@ model {
   target += inv_gamma_lpdf(rs | .001, .001);
 
   // mu and phi for the a distribution
-  target += beta_lpdf(am | .001, .001);
+  target += beta_lpdf(am | 1, 1);
   target += inv_gamma_lpdf(ap | .001, .001);
 
   // mu and phi for the b distribution
-  target += beta_lpdf(bm | .001, .001);
+  target += beta_lpdf(bm | 1, 1);
   target += inv_gamma_lpdf(bp | .001, .001);
 
   // mu mean and standard deviation
