@@ -73,11 +73,11 @@ model {
   // Hyper Prior Distributions
   // r mean and standard deviation
   target += normal_lpdf(rm | 0, 10);
-  target += inv_gamma_lpdf(rs | 10, 3);
+  target += inv_gamma_lpdf(rs | .001, .001);
 
   // log(mu) mean and standard deviation
   target += normal_lpdf(um | 0, 10);
-  target += inv_gamma_lpdf(us | 10, 3);
+  target += inv_gamma_lpdf(us | .001, .001);
 
   // Looping through the subjects
   for (n in 1:N) {
@@ -111,7 +111,7 @@ model {
       dw24 = opt2_prob4[i];
 
       // Note that I'm NOT dividing by r, because this cancels out with Contextual utility
-      // this saves us 7 arathmetic operations PER observation.
+      // this saves us 7 arithmetic operations PER observation.
       // Utility of option 1
       udiff  = opt1_out1[i]^(1 - ri) / (1 - ri) * dw11;
       udiff += opt1_out2[i]^(1 - ri) / (1 - ri) * dw12;
