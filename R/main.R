@@ -77,7 +77,7 @@ run_stan <- function(dat, mod_num = 1, stan_opts = list()) {
   # Right now, forcing the 2 option, 3 outcome lotteries
   for (val in c("prob", "out")) {
     for (opt in 1:2) {
-      for (out in 1:3) {
+      for (out in 1:4) {
         cname <- paste0("opt", opt, "_", val, out)
         stan_data[[cname]] <- dat[[cname]]
       }

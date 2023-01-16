@@ -11,17 +11,23 @@ data {
   real<lower = 0, upper = 1> opt1_prob1[N * T];
   real<lower = 0, upper = 1> opt1_prob2[N * T];
   real<lower = 0, upper = 1> opt1_prob3[N * T];
+  real<lower = 0, upper = 1> opt1_prob4[N * T];
+
   real<lower = 0, upper = 1> opt2_prob1[N * T];
   real<lower = 0, upper = 1> opt2_prob2[N * T];
   real<lower = 0, upper = 1> opt2_prob3[N * T];
+  real<lower = 0, upper = 1> opt2_prob4[N * T];
 
   // The outcomes
   real opt1_out1[N * T];
   real opt1_out2[N * T];
   real opt1_out3[N * T];
+  real opt1_out4[N * T];
+
   real opt2_out1[N * T];
   real opt2_out2[N * T];
   real opt2_out3[N * T];
+  real opt2_out4[N * T];
 
   // Max and Min outcomes with non-zero probability across the pair
   // this is for Contextual Utility
@@ -57,9 +63,12 @@ model {
   real dw11;
   real dw12;
   real dw13;
+  real dw14;
+
   real dw21;
   real dw22;
   real dw23;
+  real dw24;
 
   // Hyper Prior Distributions
   // r mean and standard deviation
@@ -79,9 +88,7 @@ model {
     target += normal_lpdf(ln_mu[n] | um, us);
 
     // The parameters for subject "n"
-    // Note for "r" that I'm taking (1 - r) right at the top here. This saves
-    // (t * 8) - 1  arathmetic operations, don't undo this.
-    ri   = 1 - r[n];
+    ri  = r[n];
     mu  = exp(ln_mu[n]);
 
     // TODO:
@@ -96,19 +103,30 @@ model {
       dw11 = opt1_prob1[i];
       dw12 = opt1_prob2[i];
       dw13 = opt1_prob3[i];
+      dw14 = opt1_prob4[i];
+
       dw21 = opt2_prob1[i];
       dw22 = opt2_prob2[i];
       dw23 = opt2_prob3[i];
+      dw24 = opt2_prob4[i];
 
       // Note that I'm NOT dividing by r, because this cancels out with Contextual utility
       // this saves us 7 arathmetic operations PER observation.
       // Utility of option 1
-      udiff  = opt1_out1[i]^ri * dw11 + opt1_out2[i]^ri * dw12 + opt1_out3[i]^ri * dw13;
+      udiff  = opt1_out1[i]^(1 - ri) / (1 - ri) * dw11;
+      udiff += opt1_out2[i]^(1 - ri) / (1 - ri) * dw12;
+      udiff += opt1_out3[i]^(1 - ri) / (1 - ri) * dw13;
+      udiff += opt1_out4[i]^(1 - ri) / (1 - ri) * dw14;
+
       // Subtracting utility of option 2 in place
-      udiff -= opt2_out1[i]^ri * dw21 + opt2_out2[i]^ri * dw22 + opt2_out3[i]^ri * dw23;
+      udiff -= opt2_out1[i]^(1 - ri) / (1 - ri) * dw21;
+      udiff -= opt2_out2[i]^(1 - ri) / (1 - ri) * dw22;
+      udiff -= opt2_out3[i]^(1 - ri) / (1 - ri) * dw23;
+      udiff -= opt2_out4[i]^(1 - ri) / (1 - ri) * dw24;
 
       // Add Contextual utility
-      udiff = udiff / ((Max[i]^ri - Min[i]^ri) * mu);
+      udiff = udiff / (Max[i]^(1 - ri) / (1 - ri) - Min[i]^(1 - ri) / (1 - ri));
+      udiff = udiff / mu;
 
       // Logistic linking function
       udiff = 1 / (1 + exp(udiff));
