@@ -16,6 +16,14 @@ get_stan_code <- function(mod_num = 1) {
   out
 }
 
+#' Get the packaged file locally
+#' @export
+get_file <- function(mod_num = 1) {
+  # Get the file for the stan code
+  fname <- get_stan_code(mod_num)
+  file.copy(from = fname, to = "./", overwrite = TRUE)
+}
+
 # The data needs some checks to make sure it'll run
 check_dat <- function(dat) {
 
@@ -36,17 +44,13 @@ check_dat <- function(dat) {
 
 }
 
-
 #' @title Esimate the Stan model
 #' @param dat the name of the stan file
 #' @export
-run_stan <- function(dat, mod_num = 1, stan_opts = list()) {
+run_stan <- function(dat, fname, stan_opts = list()) {
 
   # Make sure the dat passes the checks
   check_dat(dat)
-
-  # Get the file for the stan code
-  fname <- get_stan_code(mod_num)
 
   # The number of subjects in this dataset
   nsubs <- length(unique(dat$ID))
@@ -123,13 +127,32 @@ flatten_fit <- function(fit) {
 
 #' Fit a model, flatten it, and write to dta
 #' @export
-fit_to_dta <- function(infile, outfile = "post.dta", mod_num = 1, stan_opts = list()) {
+fit_to_dta <- function(infile, outfile = "post.dta",
+                       mod_num = 1, stan_file = NA,
+                       stan_opts = list()) {
 
   # Read in the stata dataset
   dat <- as.data.frame(haven::read_dta(infile))
 
+  # Get the file for the stan code
+  fname <- NA
+  if (!is.na(stan_file)) {
+    if (file.exists(stan_file)) {
+      fname <- stan_file
+    } else {
+      msg <- paste0(
+        "The file '",
+        stan_file,
+        "' does not exist, falling back to using model number")
+      warning(msg)
+    }
+  }
+  if (is.na(fname)) {
+    fname <- get_stan_code(mod_num)
+  }
+
   # Fit the Stan model
-  fit <- run_stan(dat, mod_num = mod_num, stan_opts = stan_opts)
+  fit <- run_stan(dat, fname = fname, stan_opts = stan_opts)
 
   # Flatten it to a single matrix
   fit <- flatten_fit(fit)

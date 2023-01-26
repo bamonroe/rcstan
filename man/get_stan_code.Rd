@@ -4,7 +4,7 @@
 \alias{get_stan_code}
 \title{Get the raw stan code}
 \usage{
-get_stan_code(mod = "eut", bhm = TRUE)
+get_stan_code(mod_num = 1)
 }
 \arguments{
 \item{mod}{the name of the PWF function}

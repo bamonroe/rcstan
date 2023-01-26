@@ -4,7 +4,7 @@
 \alias{run_stan}
 \title{Esimate the Stan model}
 \usage{
-run_stan(dat, mod = "eut", bhm = TRUE, stan_opts = list())
+run_stan(dat, fname, stan_opts = list())
 }
 \arguments{
 \item{dat}{the name of the stan file}

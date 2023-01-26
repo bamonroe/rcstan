@@ -7,8 +7,8 @@
 fit_to_dta(
   infile,
   outfile = "post.dta",
-  mod = "eut",
-  bhm = TRUE,
+  mod_num = 1,
+  stan_file = NA,
   stan_opts = list()
 )
 }
