@@ -103,7 +103,7 @@ model {
 
   // log(gamma) mean and standard deviation
   target += normal_lpdf(gm | 0, 10);
-  target += inv_gamma_lpdf(gs | 8, 3);
+  target += inv_gamma_lpdf(gs | 0.001, 0.001);
 
   // log(mu) mean and standard deviation
   target += normal_lpdf(um | 0, 10);
@@ -151,15 +151,15 @@ model {
       pw24 = 1;
 
       // Add the probability weighting function
-      dw14 = 1;  // Must always be 1 theory-wise
-      dw13 = pw13^g;
-      dw12 = pw12^g;
       dw11 = pw11^g;
+      dw12 = pw12^g;
+      dw13 = pw13^g;
+      dw14 = 1;  // Must always be 1 theory-wise
 
-      dw24 = 1;  // Must always be 1 theory-wise
-      dw23 = pw23^g;
-      dw22 = pw22^g;
       dw21 = pw21^g;
+      dw22 = pw22^g;
+      dw23 = pw23^g;
+      dw24 = 1;  // Must always be 1 theory-wise
 
       // Decumulate the probabilities
       dw14 -= dw13;
