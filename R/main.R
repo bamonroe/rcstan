@@ -52,7 +52,7 @@ run_stan <- function(dat, mod_num = 1, stan_opts = list()) {
   nsubs <- length(unique(dat$ID))
 
   # The number of observations per subject
-  ntasks <- nrow(dat) / nsubs
+  ntasks <- unlist(lapply(split(dat, dat$ID), nrow))
 
   cnames <- colnames(dat)
   # Figure out the number of unique options by parsing the column names
@@ -71,6 +71,7 @@ run_stan <- function(dat, mod_num = 1, stan_opts = list()) {
   stan_data <- list(
     N = nsubs,
     T = ntasks,
+    ndat = nrow(dat),
     choice = dat$choice
   )
 

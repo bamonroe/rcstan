@@ -1,38 +1,40 @@
 data {
   // The number of subjects
   int<lower=0> N;
-  // The number of data points per subject
-  int<lower=0> T;
+  // The number of data points by subject
+  int<lower=0> T[N];
+  // The number of rows of data total
+  int<lower=0> ndat;
 
   // The choices
-  int<lower=0, upper = 1> choice[N * T];
+  int<lower=0, upper = 1> choice[ndat];
 
   // The probabilities
-  real<lower = 0, upper = 1> opt1_prob1[N * T];
-  real<lower = 0, upper = 1> opt1_prob2[N * T];
-  real<lower = 0, upper = 1> opt1_prob3[N * T];
-  real<lower = 0, upper = 1> opt1_prob4[N * T];
+  real<lower = 0, upper = 1> opt1_prob1[ndat];
+  real<lower = 0, upper = 1> opt1_prob2[ndat];
+  real<lower = 0, upper = 1> opt1_prob3[ndat];
+  real<lower = 0, upper = 1> opt1_prob4[ndat];
 
-  real<lower = 0, upper = 1> opt2_prob1[N * T];
-  real<lower = 0, upper = 1> opt2_prob2[N * T];
-  real<lower = 0, upper = 1> opt2_prob3[N * T];
-  real<lower = 0, upper = 1> opt2_prob4[N * T];
+  real<lower = 0, upper = 1> opt2_prob1[ndat];
+  real<lower = 0, upper = 1> opt2_prob2[ndat];
+  real<lower = 0, upper = 1> opt2_prob3[ndat];
+  real<lower = 0, upper = 1> opt2_prob4[ndat];
 
   // The outcomes
-  real opt1_out1[N * T];
-  real opt1_out2[N * T];
-  real opt1_out3[N * T];
-  real opt1_out4[N * T];
+  real opt1_out1[ndat];
+  real opt1_out2[ndat];
+  real opt1_out3[ndat];
+  real opt1_out4[ndat];
 
-  real opt2_out1[N * T];
-  real opt2_out2[N * T];
-  real opt2_out3[N * T];
-  real opt2_out4[N * T];
+  real opt2_out1[ndat];
+  real opt2_out2[ndat];
+  real opt2_out3[ndat];
+  real opt2_out4[ndat];
 
   // Max and Min outcomes with non-zero probability across the pair
   // this is for Contextual Utility
-  real Max[N * T];
-  real Min[N * T];
+  real Max[ndat];
+  real Min[ndat];
 }
 
 parameters {
@@ -57,7 +59,7 @@ model {
   // Variable for the utility difference
   real udiff;
   // Variable keeping track of the observation
-  int i;
+  int i = 0;
 
   // Variables for probabilities
   real dw11;
@@ -96,8 +98,8 @@ model {
     // make use of Stan's built-in variable transformation functionality.
 
     // Looping through each of the observations per-subject
-    for (t in 1:T) {
-      i = n * t;
+    for (t in 1:T[n]) {
+      i += 1;
 
       // Some short-hand reference for the probabilities
       dw11 = opt1_prob1[i];
