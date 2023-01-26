@@ -1,10 +1,5 @@
-mod_map <- function(i) {
-  c(
-    "eut_bhm",
-    "rdu_power_bhm",
-    "rdu_rw_bhm"
-  )[i]
-}
+supported_mods <- c( "eut_bhm", "rdu_power_bhm", "rdu_rw_bhm")
+mod_map <- function(i) supported_mods[i]
 
 #' @title Get the raw stan code
 #' @param mod the name of the PWF function
@@ -18,10 +13,12 @@ get_stan_code <- function(mod_num = 1) {
 
 #' Get the packaged file locally
 #' @export
-get_file <- function(mod_num = 1) {
+get_files <- function() {
   # Get the file for the stan code
-  fname <- get_stan_code(mod_num)
-  file.copy(from = fname, to = "./", overwrite = TRUE)
+  for (i in seq_along(supported_mods)) {
+    fname <- get_stan_code(i)
+    file.copy(from = fname, to = getwd(), overwrite = TRUE)
+  }
 }
 
 # The data needs some checks to make sure it'll run
@@ -128,31 +125,28 @@ flatten_fit <- function(fit) {
 #' Fit a model, flatten it, and write to dta
 #' @export
 fit_to_dta <- function(infile, outfile = "post.dta",
-                       mod_num = 1, stan_file = NA,
+                       stan_file = NA,
                        stan_opts = list()) {
 
   # Read in the stata dataset
   dat <- as.data.frame(haven::read_dta(infile))
 
+  # Write the supported models to the current dir
+  get_files()
+
   # Get the file for the stan code
-  fname <- NA
-  if (!is.na(stan_file)) {
-    if (file.exists(stan_file)) {
-      fname <- stan_file
-    } else {
-      msg <- paste0(
-        "The file '",
-        stan_file,
-        "' does not exist, falling back to using model number")
-      warning(msg)
-    }
-  }
-  if (is.na(fname)) {
-    fname <- get_stan_code(mod_num)
+  if (is.na(stan_file)) {
+    msg <- paste0("You need to specify a stan file")
+    stop(msg)
+  } else if (! file.exists(stan_file)) {
+    msg <- paste0( "The file '", stan_file, "' does not exist")
+    stop(msg)
   }
 
   # Fit the Stan model
-  fit <- run_stan(dat, fname = fname, stan_opts = stan_opts)
+  fit <- run_stan(dat, fname = stan_file, stan_opts = stan_opts)
+  # Save the fitted model
+  save(fit, file = paste0(stan_file, ".Rda"))
 
   # Flatten it to a single matrix
   fit <- flatten_fit(fit)

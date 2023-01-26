@@ -2,6 +2,6 @@
 
 export(fit_to_dta)
 export(flatten_fit)
-export(get_file)
+export(get_files)
 export(get_stan_code)
 export(run_stan)
