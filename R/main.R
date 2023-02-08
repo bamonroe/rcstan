@@ -1,6 +1,50 @@
 supported_mods <- c( "eut_bhm", "rdu_power_bhm", "rdu_rw_bhm")
 mod_map <- function(i) supported_mods[i]
 
+covar_split <- function(s) {
+  m <- unlist(strsplit(s, ")"))
+  v <- lapply(m, function(m) {
+
+    m <- stringr::str_remove(m, "\\(")
+    m <- unlist(stringr::str_split(m, ","))
+    m <- stringr::str_squish(m)
+    m
+
+  })
+}
+
+covar_unique <- function(cvars) {
+  uvars <- unique(unlist(cvars))
+  uvars[uvars!= ""]
+}
+
+covar_data <- function(cvars, dat) {
+  uvars <- covar_unique(cvars)
+  uvars <- stringr::str_sort(uvars)
+  dat <- lapply(split(dat, dat$ID), function(sdat) sdat[1, ])
+  dat <- do.call(rbind, dat)
+  dat[, uvars]
+}
+
+covar_ucovars <- function(cvars) {
+  uvars <- covar_unique(cvars)
+  uvars <- stringr::str_sort(uvars)
+  j <- lapply(cvars, function(v) {
+    ifelse(uvars %in% v, 1, 0)
+  })
+  do.call(cbind, j)
+}
+
+covar_nest <- function(cvars) {
+  count <- 0
+  for (i in cvars) {
+    j <- i[i != ""]
+    count <- count + length(j)
+  }
+  count
+}
+
+
 #' @title Get the raw stan code
 #' @param mod the name of the PWF function
 #' @param bhm boolean, TRUE indicating to use the BHM model
@@ -44,7 +88,7 @@ check_dat <- function(dat) {
 #' @title Esimate the Stan model
 #' @param dat the name of the stan file
 #' @export
-run_stan <- function(dat, fname, stan_opts = list()) {
+run_stan <- function(dat, covars, fname, stan_opts = list()) {
 
   # Make sure the dat passes the checks
   check_dat(dat)
@@ -90,6 +134,25 @@ run_stan <- function(dat, fname, stan_opts = list()) {
   stan_data[["Max"]] <- dat[["Max"]]
   stan_data[["Min"]] <- dat[["Min"]]
 
+  # Get the covariates
+  csplit     <- covar_split(covars)
+  nhyper     <- length(csplit)
+  ncvars     <- length(covar_unique(csplit))
+  ncovar_est <- covar_nest(csplit)
+  cvarmap    <- covar_ucovars(csplit)
+  cdat       <- covar_data(csplit, dat)
+
+  # Uncomment to help with debugging
+  #print(cvarmap)
+  #print(nhyper)
+  #print(ncvars)
+  #print(ncovar_est)
+
+  stan_data$ncovar_est <- ncovar_est
+  stan_data$ncvars     <- ncvars
+  stan_data$nhyper     <- nhyper
+  stan_data$cvarmap    <- cvarmap
+  stan_data$covars     <- cdat
 
   stan_opts$file <- fname
   stan_opts$data <- stan_data
@@ -122,10 +185,12 @@ flatten_fit <- function(fit) {
   fit
 }
 
+
 #' Fit a model, flatten it, and write to dta
 #' @export
 fit_to_dta <- function(infile, outfile = "post.dta",
                        stan_file = NA,
+                       covars = NA,
                        stan_opts = list()) {
 
   # Read in the stata dataset
@@ -144,7 +209,7 @@ fit_to_dta <- function(infile, outfile = "post.dta",
   }
 
   # Fit the Stan model
-  fit <- run_stan(dat, fname = stan_file, stan_opts = stan_opts)
+  fit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts)
   # Save the fitted model
   save(fit, file = paste0(stan_file, ".Rda"))
 

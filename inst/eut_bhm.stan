@@ -5,6 +5,17 @@ data {
   int<lower=0> T[N];
   // The number of rows of data total
   int<lower=0> ndat;
+  // The number of covariate effects to estimate
+  int<lower=0> ncovar_est;
+  // The number of unique covariates passed across all hyper parameters
+  int<lower=0> ncvars;
+  // Number of hyper-parameter
+  int<lower=0> nhyper;
+  // The list of bools for each possible covar, for each hyper-parameter
+  int<lower=0> cvarmap[ncvars, nhyper];
+  // This is the matrix of all unique covars, with 1 row per subjects, 1 column
+  // for each possible covar across all hyper-parameters
+  real<lower=0> covars[N, ncvars];
 
   // The choices
   int<lower=0, upper = 1> choice[ndat];
@@ -39,27 +50,36 @@ data {
 
 parameters {
   // Hyper parameters first
-  // parameters for the mean of each of r, and mu
+  // parameters for the CRRA parameter
   real rm;
+  real ln_rs;
+  // parameters for the Fechner term
   real um;
-  // parameters for the standard deviation of each of r, phi, eta, and mu
-  real<lower = 0> rs;
-  real<lower = 0> us;
+  real ln_us;
 
   // Arrays of parameters for each subject. Each arrary keeps N parameters, N
   // being the number of subjects
   real r[N];
   real ln_mu[N];
+
+  // Vector for the parameters that defined the covariate effects
+  real dem[ncovar_est];
 }
 
 model {
   // Variables for subject specific parameters - this should reduce memory lookups
   real ri;
   real mu;
+
+  // Variables for covariate-corrected hyper-parameters. You need to change
+  // the index manually per-model
+  real hyper[4];
   // Variable for the utility difference
   real udiff;
   // Variable keeping track of the observation
   int i = 0;
+  // Variable keeping track of covariate effects
+  int ci = 0;
 
   // Variables for probabilities
   real dw11;
@@ -74,28 +94,61 @@ model {
 
   // Hyper Prior Distributions
   // r mean and standard deviation
-  target += normal_lpdf(rm | 0, 10);
-  target += inv_gamma_lpdf(rs | .001, .001);
+  target += normal_lpdf(rm    | 0, 100);
+  target += normal_lpdf(ln_rs | 0, 100);
 
   // log(mu) mean and standard deviation
-  target += normal_lpdf(um | 0, 10);
-  target += inv_gamma_lpdf(us | .001, .001);
+  target += normal_lpdf(um    | 0, 100);
+  target += normal_lpdf(ln_us | 0, 100);
+
+  // Add the prior for each possible covar effect
+  // For now, a weak prior on 0. Putting a stronger prior on 0 requires more
+  // evidence to infer that an effect is really there.
+  for (c in 1:ncovar_est) {
+    target += normal_lpdf(dem[c] | 0, 100);
+  }
 
   // Looping through the subjects
   for (n in 1:N) {
 
-    // CRRA prior
-    target += normal_lpdf(r[n] | rm, rs);
+    // Set the vector for the covariate-corrected hyper-parameters equal to the
+    // base hyper-parameters
+    hyper[1] = rm;
+    hyper[2] = ln_rs;
+    hyper[3] = um;
+    hyper[4] = ln_us;
+
+    // Reset the effect counter to 0
+    ci = 0;
+    // Note that we're cycling through 4 posisble hyper-parameters. This is
+    // model dependent, and up to the user to change
+    for (h in 1:4) {
+      // We're only doing this if the hyper-parameter is being used
+      if (nhyper >= h) {
+        // Loop through each possible covar to see if it's being applied
+        for (c in 1:ncvars) {
+          // If it is, increment the effect counter, and apply the effect to the hyper-parameter
+          if (cvarmap[c, h] == 1) {
+            ci += 1;
+            hyper[h] += covars[n, c] * dem[ci];
+          }
+        }
+      }
+    }
+
+    // Put the hyper-parameters into their correct limit
+    hyper[2] = exp(hyper[2]);
+    hyper[4] = exp(hyper[4]);
+
+    // Use the covar adjusted hyper-parameters to add the priors of the
+    // parameters
+    target += normal_lpdf(r[n] | hyper[1], hyper[2]);
     // Fechner prior
-    target += normal_lpdf(ln_mu[n] | um, us);
+    target += normal_lpdf(ln_mu[n] | hyper[3], hyper[4]);
 
     // The parameters for subject "n"
     ri  = r[n];
     mu  = exp(ln_mu[n]);
-
-    // TODO:
-    // Still need to add jacobian correction for variable transformations, or
-    // make use of Stan's built-in variable transformation functionality.
 
     // Looping through each of the observations per-subject
     for (t in 1:T[n]) {
@@ -141,3 +194,4 @@ model {
     }
   }
 }
+
