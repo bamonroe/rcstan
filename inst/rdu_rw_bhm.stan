@@ -5,6 +5,17 @@ data {
   int<lower=0> T[N];
   // The number of rows of data total
   int<lower=0> ndat;
+  // The number of covariate effects to estimate
+  int<lower=0> ncovar_est;
+  // The number of unique covariates passed across all hyper parameters
+  int<lower=0> ncvars;
+  // Number of hyper-parameter
+  int<lower=0> nhyper;
+  // The list of bools for each possible covar, for each hyper-parameter
+  int<lower=0> cvarmap[ncvars, nhyper];
+  // This is the matrix of all unique covars, with 1 row per subjects, 1 column
+  // for each possible covar across all hyper-parameters
+  real<lower=0> covars[N, ncvars];
 
   // The choices
   int<lower=0, upper = 1> choice[ndat];
@@ -41,21 +52,24 @@ parameters {
   // Hyper parameters first
   // parameters for the mean of each of r, a, b, and mu
   real rm;
-  real<lower = 0> am;
-  real<lower = 0> bm;
-  real<lower = 0> um;
+  real am;
+  real bm;
+  real um;
   // parameters (proportional to) the standard deviation of each of r, phi, eta, and mu
-  real<lower = 0> rs;
-  real<lower = 0> ap;
-  real<lower = 0> bp;
-  real<lower = 0> us;
+  real rs;
+  real ap;
+  real bp;
+  real us;
 
   // Arrays of parameters for each subject. Each arrary keeps N parameters, N
   // being the number of subjects
   real r[N];
-  real<lower = 0, upper = 1> a[N];
-  real<lower = 0, upper = 1> b[N];
+  real a[N];
+  real b[N];
   real ln_mu[N];
+
+  // Vector for the parameters that defined the covariate effects
+  real dem[ncovar_est];
 }
 
 model {
@@ -67,22 +81,17 @@ model {
   real ai;
   real bi;
   real mu;
+  // Variables for covariate-corrected hyper-parameters. You need to change
+  // the index manually per-model
+  real hyper[8];
   // Variable for the utility difference
   real udiff;
+  // Variable keeping track of covariate effects
+  int ci = 0;
   // Variable keeping track of the observation
   int i = 0;
 
-  // Variables for probabilities
-  real p11;
-  real p12;
-  real p13;
-  real p14;
-
-  real p21;
-  real p22;
-  real p23;
-  real p24;
-
+  // Variables for cumulative probabilities
   real pw11;
   real pw12;
   real pw13;
@@ -93,6 +102,7 @@ model {
   real pw23;
   real pw24;
 
+  // Variables for decision weights
   real dw11;
   real dw12;
   real dw13;
@@ -105,43 +115,76 @@ model {
 
   // Hyper Prior Distributions
   // r mean and standard deviation
-  target += normal_lpdf(rm | 0, 10);
-  target += inv_gamma_lpdf(rs | .001, .001);
+  target += normal_lpdf(rm | 0, 100);
+  target += normal_lpdf(rs | 0, 100);
 
   // mu and phi for the a distribution
-  target += beta_lpdf(am | 1, 1);
-  target += inv_gamma_lpdf(ap | .001, .001);
+  target += normal_lpdf(am | 0, 100);
+  target += normal_lpdf(ap | 0, 100);
 
   // mu and phi for the b distribution
-  target += beta_lpdf(bm | 1, 1);
-  target += inv_gamma_lpdf(bp | .001, .001);
+  target += normal_lpdf(bm | 0, 100);
+  target += normal_lpdf(bp | 0, 100);
 
   // log(mu) mean and standard deviation
-  target += normal_lpdf(um | 0, 10);
-  target += inv_gamma_lpdf(us | .001, .001);
+  target += normal_lpdf(um | 0, 100);
+  target += normal_lpdf(us | 0, 100);
+
+  // Add the prior for each possible covar effect
+  // For now, a weak prior on 0. Putting a stronger prior on 0 requires more
+  // evidence to infer that an effect is really there.
+  for (c in 1:ncovar_est) {
+    target += normal_lpdf(dem[c] | 0, 100);
+  }
 
   // Looping through the subjects
   for (n in 1:N) {
+    // Set the vector for the covariate-corrected hyper-parameters equal to the
+    // base hyper-parameters
+    hyper[1] = rm;
+    hyper[2] = rs;
+    hyper[3] = am;
+    hyper[4] = ap;
+    hyper[5] = bm;
+    hyper[6] = bp;
+    hyper[7] = um;
+    hyper[8] = us;
 
-    // CRRA prior
-    target += normal_lpdf(r[n] | rm, rs);
-    // PWF prior
-    // The estimates (am, ap) are the mu and phi parameterizations of the beta distribution
-    // we need to recover the alpha and beta parameters for use with the beta pdf
-    apar = am * ap;
-    bpar = (1 - am) * ap;
-    target += beta_lpdf(a[n] | apar, bpar);
+    // Reset the effect counter to 0
+    ci = 0;
+    // Note that we're cycling through 4 posisble hyper-parameters. This is
+    // model dependent, and up to the user to change
+    for (h in 1:8) {
+      // We're only doing this if the hyper-parameter is being used
+      if (nhyper >= h) {
+        // Loop through each possible covar to see if it's being applied
+        for (c in 1:ncvars) {
+          // If it is, increment the effect counter, and apply the effect to the hyper-parameter
+          if (cvarmap[c, h] == 1) {
+            ci += 1;
+            hyper[h] += covars[n, c] * dem[ci];
+          }
+        }
+      }
+    }
 
-    apar = bm * bp;
-    bpar = (1 - bm) * bp;
-    target += beta_lpdf(b[n] | apar, bpar);
-    // Fechner prior
-    target += normal_lpdf(ln_mu[n] | um, us);
+    // Put the hyper-parameters into their correct limit
+    hyper[2] = exp(hyper[2]);
+    hyper[4] = exp(hyper[4]);
+    hyper[6] = exp(hyper[6]);
+    hyper[8] = exp(hyper[8]);
+
+    // Priors for the parameters
+    target += normal_lpdf(r[n]     | hyper[1], hyper[2]);
+    target += normal_lpdf(a[n]     | hyper[3], hyper[4]);
+    target += normal_lpdf(b[n]     | hyper[5], hyper[6]);
+    target += normal_lpdf(ln_mu[n] | hyper[7], hyper[8]);
 
     // The parameters for subject "n"
     ri  = r[n];
-    ai  = a[n];
-    bi  = b[n];
+    ai  = 1 / (1 + exp(-a[n]));
+    bi  = 1 / (1 + exp(-b[n]));
+
     // To allow convex, then concave, shapes, "bi" must be allowed to be
     // greater than 1, but it still must be less than the second term in the
     // following. Since draws of bi are from a beta distribution, we can
@@ -155,28 +198,16 @@ model {
     for (t in 1:T[n]) {
       i += 1;
 
-      // Some short-hand reference for the probabilities
-      p11 = opt1_prob1[i];
-      p12 = opt1_prob2[i];
-      p13 = opt1_prob3[i];
-      p14 = opt1_prob4[i];
-
-      p21 = opt2_prob1[i];
-      p22 = opt2_prob2[i];
-      p23 = opt2_prob3[i];
-      p24 = opt2_prob4[i];
-
       // Cumulate the probabilities from higest to lowest
-      pw11 = p11;
-      pw12 = p12 + p11;
-      pw13 = p13 + p12;
+      pw11 = opt1_prob1[i];
+      pw12 = pw11 + opt1_prob2[i];
+      pw13 = pw12 + opt1_prob3[i];
       pw14 = 1;
 
-      pw21 = p21;
-      pw22 = p22 + p21;
-      pw23 = p23 + p22;
+      pw21 = opt2_prob1[i];
+      pw22 = pw21 + opt2_prob2[i];
+      pw23 = pw22 + opt2_prob3[i];
       pw24 = 1;
-
 
       // Add the probability weighting function
       // Riegar & Wang (2006, p. 677)
