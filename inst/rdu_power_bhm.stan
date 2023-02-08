@@ -5,6 +5,17 @@ data {
   int<lower=0> T[N];
   // The number of rows of data total
   int<lower=0> ndat;
+  // The number of covariate effects to estimate
+  int<lower=0> ncovar_est;
+  // The number of unique covariates passed across all hyper parameters
+  int<lower=0> ncvars;
+  // Number of hyper-parameter
+  int<lower=0> nhyper;
+  // The list of bools for each possible covar, for each hyper-parameter
+  int<lower=0> cvarmap[ncvars, nhyper];
+  // This is the matrix of all unique covars, with 1 row per subjects, 1 column
+  // for each possible covar across all hyper-parameters
+  real<lower=0> covars[N, ncvars];
 
   // The choices
   int<lower=0, upper = 1> choice[ndat];
@@ -66,16 +77,6 @@ model {
   int i = 0;
 
   // Variables for probabilities
-  real p11;
-  real p12;
-  real p13;
-  real p14;
-
-  real p21;
-  real p22;
-  real p23;
-  real p24;
-
   real pw11;
   real pw12;
   real pw13;
@@ -128,26 +129,15 @@ model {
     for (t in 1:T[n]) {
       i += 1;
 
-      // Some short-hand reference for the probabilities
-      p11 = opt1_prob1[i];
-      p12 = opt1_prob2[i];
-      p13 = opt1_prob3[i];
-      p14 = opt1_prob4[i];
-
-      p21 = opt2_prob1[i];
-      p22 = opt2_prob2[i];
-      p23 = opt2_prob3[i];
-      p24 = opt2_prob4[i];
-
       // Cumulate the probabilities from higest to lowest
-      pw11 = p11;
-      pw12 = p12 + p11;
-      pw13 = p13 + p12;
+      pw11 = opt1_prob1[i];
+      pw12 = pw11 + opt1_prob2[i];
+      pw13 = pw12 + opt1_prob3[i];
       pw14 = 1;
 
-      pw21 = p21;
-      pw22 = p22 + p21;
-      pw23 = p23 + p22;
+      pw21 = opt2_prob1[i];
+      pw22 = pw21 + opt2_prob2[i];
+      pw23 = pw22 + opt2_prob3[i];
       pw24 = 1;
 
       // Add the probability weighting function
