@@ -185,12 +185,23 @@ flatten_fit <- function(fit) {
   fit
 }
 
+mcmc_diag <- function(fit, fstub) {
+  mlist <- rstan::As.mcmc.list(fit)
+  tryCatch(coda::gelman.plot(mlist), error = function(e) print(e))
+  tryCatch(coda::geweke.plot(mlist), error = function(e) print(e))
+  tryCatch({
+    gd <- coda::gelman.diag(mlist)
+    write.csv(gd["psrf"],  paste0(fstub, "_psrf.csv"))
+    write.csv(gd["mpsrf"], paste0(fstub, "_mpsrf.csv"))
+  }, error = function(e) print(e))
+}
 
 #' Fit a model, flatten it, and write to dta
 #' @export
 fit_to_dta <- function(infile, outfile = "post.dta",
                        stan_file = NA,
                        covars = NA,
+                       diag = FALSE,
                        stan_opts = list()) {
 
   # Read in the stata dataset
@@ -211,7 +222,18 @@ fit_to_dta <- function(infile, outfile = "post.dta",
   # Fit the Stan model
   fit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts)
   # Save the fitted model
-  save(fit, file = paste0(stan_file, ".Rda"))
+  fstub <- strsplit(stan_file, ".stan")[[1]]
+  save(fit, file = paste0(fstub, ".Rda"))
+
+  if (diag) {
+    mcmc_diag(fit, fstub)
+  }
+
+  if (diag) {
+    tryCatch({
+      mcmc_diag(fit)
+    }, error = function(e) print(e))
+  }
 
   # Flatten it to a single matrix
   fit <- flatten_fit(fit)

@@ -4,7 +4,14 @@
 \alias{fit_to_dta}
 \title{Fit a model, flatten it, and write to dta}
 \usage{
-fit_to_dta(infile, outfile = "post.dta", stan_file = NA, stan_opts = list())
+fit_to_dta(
+  infile,
+  outfile = "post.dta",
+  stan_file = NA,
+  covars = NA,
+  diag = FALSE,
+  stan_opts = list()
+)
 }
 \description{
 Fit a model, flatten it, and write to dta

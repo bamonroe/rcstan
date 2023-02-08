@@ -14,5 +14,6 @@ Imports:
     StanHeaders,
     rstan,
 		stringr,
+		coda,
 		haven
 Config/testthat/edition: 3
