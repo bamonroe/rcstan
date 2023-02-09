@@ -51,11 +51,11 @@ data {
 parameters {
   // Hyper parameters first
   // parameters for the CRRA parameter
-  real rm;
-  real ln_rs;
+  real hyper_r_mean;
+  real hyper_r_lnsd;
   // parameters for the Fechner term
-  real um;
-  real ln_us;
+  real hyper_u_mean;
+  real hyper_u_lnsd;
 
   // Arrays of parameters for each subject. Each arrary keeps N parameters, N
   // being the number of subjects
@@ -94,12 +94,12 @@ model {
 
   // Hyper Prior Distributions
   // r mean and standard deviation
-  target += normal_lpdf(rm    | 0, 100);
-  target += normal_lpdf(ln_rs | 0, 100);
+  target += normal_lpdf(hyper_r_mean | 0, 100);
+  target += normal_lpdf(hyper_r_lnsd | 0, 100);
 
   // log(mu) mean and standard deviation
-  target += normal_lpdf(um    | 0, 100);
-  target += normal_lpdf(ln_us | 0, 100);
+  target += normal_lpdf(hyper_u_mean | 0, 100);
+  target += normal_lpdf(hyper_u_lnsd | 0, 100);
 
   // Add the prior for each possible covar effect
   // For now, a weak prior on 0. Putting a stronger prior on 0 requires more
@@ -113,10 +113,10 @@ model {
 
     // Set the vector for the covariate-corrected hyper-parameters equal to the
     // base hyper-parameters
-    hyper[1] = rm;
-    hyper[2] = ln_rs;
-    hyper[3] = um;
-    hyper[4] = ln_us;
+    hyper[1] = hyper_r_mean;
+    hyper[2] = hyper_r_lnsd;
+    hyper[3] = hyper_u_mean;
+    hyper[4] = hyper_u_lnsd;
 
     // Reset the effect counter to 0
     ci = 0;
@@ -194,4 +194,5 @@ model {
     }
   }
 }
+
 

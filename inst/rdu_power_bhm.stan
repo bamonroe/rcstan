@@ -51,13 +51,18 @@ data {
 parameters {
   // Hyper parameters first
   // parameters for the mean of each of r, phi, eta, and mu
-  real rm;
-  real gm;
-  real um;
-  // parameters for the standard deviation of each of r, phi, eta, and mu
-  real ln_rs;
-  real ln_gs;
-  real ln_us;
+  //
+ 
+  // Hyper parameters first
+  // parameters for the CRRA parameter
+  real hyper_r_mean;
+  real hyper_r_lnsd;
+  // parameters for the PWF gamma term
+  real hyper_g_mean;
+  real hyper_g_lnsd;
+  // parameters for the Fechner term
+  real hyper_u_mean;
+  real hyper_u_lnsd;
 
   // Arrays of parameters for each subject. Each arrary keeps N parameters, N
   // being the number of subjects
@@ -108,16 +113,16 @@ model {
 
   // Hyper Prior Distributions
   // r mean and standard deviation
-  target += normal_lpdf(rm    | 0, 100);
-  target += normal_lpdf(ln_rs | 0, 100);
+  target += normal_lpdf(hyper_r_mean | 0, 100);
+  target += normal_lpdf(hyper_r_lnsd | 0, 100);
 
   // log(gamma) mean and standard deviation
-  target += normal_lpdf(gm    | 0, 100);
-  target += normal_lpdf(ln_gs | 0, 100);
+  target += normal_lpdf(hyper_g_mean | 0, 100);
+  target += normal_lpdf(hyper_g_lnsd | 0, 100);
 
   // log(mu) mean and standard deviation
-  target += normal_lpdf(um    | 0, 100);
-  target += normal_lpdf(ln_us | 0, 100);
+  target += normal_lpdf(hyper_u_mean | 0, 100);
+  target += normal_lpdf(hyper_u_lnsd | 0, 100);
 
   // Add the prior for each possible covar effect
   // For now, a weak prior on 0. Putting a stronger prior on 0 requires more
@@ -130,12 +135,12 @@ model {
   for (n in 1:N) {
     // Set the vector for the covariate-corrected hyper-parameters equal to the
     // base hyper-parameters
-    hyper[1] = rm;
-    hyper[2] = ln_rs;
-    hyper[3] = gm;
-    hyper[4] = ln_gs;
-    hyper[5] = um;
-    hyper[6] = ln_us;
+    hyper[1] = hyper_r_mean;
+    hyper[2] = hyper_r_lnsd;
+    hyper[3] = hyper_g_mean;
+    hyper[4] = hyper_g_lnsd;
+    hyper[5] = hyper_u_mean;
+    hyper[6] = hyper_u_lnsd;
 
     // Reset the effect counter to 0
     ci = 0;
