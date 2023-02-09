@@ -193,7 +193,7 @@ mcmc_diag <- function(fit, fstub) {
     write.csv(gd["mpsrf"], paste0(fstub, "_mpsrf.csv"))
   }, error = function(e) print(e))
   tryCatch({
-    val <- coda::autocorr(mlist)
+    val <- coda::autocorr.diag(mlist, lags = c(0, 1, 5, 10, 50, 100))
     write.csv(val,  paste0(fstub, "_autocorr.csv"))
   }, error = function(e) print(e))
   tryCatch({
@@ -206,7 +206,7 @@ mcmc_diag <- function(fit, fstub) {
 #' @export
 fit_to_dta <- function(infile, outfile = "post.dta",
                        stan_file = NA,
-                       covars = NA,
+                       covars = "",
                        diag = FALSE,
                        stan_opts = list()) {
 
@@ -225,20 +225,19 @@ fit_to_dta <- function(infile, outfile = "post.dta",
     stop(msg)
   }
 
-  # Fit the Stan model
-  fit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts)
+  # Handle the case where no covars are passed
+  if (covars == "") {
+    covars <- "()"
+  }
   # Save the fitted model
   fstub <- strsplit(stan_file, ".stan")[[1]]
+
+  # Fit the Stan model
+  fit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts)
   save(fit, file = paste0(fstub, ".Rda"))
 
   if (diag) {
     mcmc_diag(fit, fstub)
-  }
-
-  if (diag) {
-    tryCatch({
-      mcmc_diag(fit)
-    }, error = function(e) print(e))
   }
 
   # Flatten it to a single matrix
