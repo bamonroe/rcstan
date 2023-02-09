@@ -187,12 +187,18 @@ flatten_fit <- function(fit) {
 
 mcmc_diag <- function(fit, fstub) {
   mlist <- rstan::As.mcmc.list(fit)
-  tryCatch(coda::gelman.plot(mlist), error = function(e) print(e))
-  tryCatch(coda::geweke.plot(mlist), error = function(e) print(e))
   tryCatch({
     gd <- coda::gelman.diag(mlist)
     write.csv(gd["psrf"],  paste0(fstub, "_psrf.csv"))
     write.csv(gd["mpsrf"], paste0(fstub, "_mpsrf.csv"))
+  }, error = function(e) print(e))
+  tryCatch({
+    val <- coda::autocorr(mlist)
+    write.csv(val,  paste0(fstub, "_autocorr.csv"))
+  }, error = function(e) print(e))
+  tryCatch({
+    val <- coda::effectiveSize(mlist)
+    write.csv(val,  paste0(fstub, "_effectivesize.csv"))
   }, error = function(e) print(e))
 }
 
