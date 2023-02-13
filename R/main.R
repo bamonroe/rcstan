@@ -159,7 +159,6 @@ run_stan <- function(dat, covars, fname, stan_opts = list()) {
 
   # The fitted model
   fit <- do.call(rstan::stan, stan_opts)
-
   fit
 }
 
@@ -193,7 +192,7 @@ mcmc_diag <- function(fit, fstub) {
     write.csv(gd["mpsrf"], paste0(fstub, "_mpsrf.csv"))
   }, error = function(e) print(e))
   tryCatch({
-    val <- coda::autocorr.diag(mlist, lags = c(0, 1, 5, 10, 50, 100))
+    val <- coda::autocorr.diag(mlist, lags = seq(from = 1, to = 100, by = 1))
     write.csv(val,  paste0(fstub, "_autocorr.csv"))
   }, error = function(e) print(e))
   tryCatch({
