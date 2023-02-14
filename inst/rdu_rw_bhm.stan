@@ -51,21 +51,21 @@ data {
 parameters {
   // Hyper parameters first
   // parameters for the mean of each of r, a, b, and mu
-  real rm;
-  real am;
-  real bm;
-  real um;
+  real hyper_r_mean;
+  real hyper_a_mean;
+  real hyper_c_mean;
+  real hyper_mu_mean;
   // parameters (proportional to) the standard deviation of each of r, phi, eta, and mu
-  real rs;
-  real ap;
-  real bp;
-  real us;
+  real hyper_r_lnsd;
+  real hyper_a_lnsd;
+  real hyper_b_lnsd;
+  real hyper_mu_lnsd;
 
   // Arrays of parameters for each subject. Each arrary keeps N parameters, N
   // being the number of subjects
   real r[N];
   real a[N];
-  real b[N];
+  real c[N];
   real ln_mu[N];
 
   // Vector for the parameters that defined the covariate effects
@@ -80,6 +80,7 @@ model {
   real ri;
   real ai;
   real bi;
+  real ci;
   real mu;
   // Variables for covariate-corrected hyper-parameters. You need to change
   // the index manually per-model
@@ -115,20 +116,20 @@ model {
 
   // Hyper Prior Distributions
   // r mean and standard deviation
-  target += normal_lpdf(rm | 0, 100);
-  target += normal_lpdf(rs | 0, 100);
+  target += normal_lpdf(hyper_r_mean | 0, 100);
+  target += normal_lpdf(hyper_r_lnsd | 0, 100);
 
   // mu and phi for the a distribution
-  target += normal_lpdf(am | 0, 100);
-  target += normal_lpdf(ap | 0, 100);
+  target += normal_lpdf(hyper_a_mean | 0, 100);
+  target += normal_lpdf(hyper_a_lnsd | 0, 100);
 
   // mu and phi for the b distribution
-  target += normal_lpdf(bm | 0, 100);
-  target += normal_lpdf(bp | 0, 100);
+  target += normal_lpdf(hyper_b_mean | 0, 100);
+  target += normal_lpdf(hyper_b_lnsd | 0, 100);
 
   // log(mu) mean and standard deviation
-  target += normal_lpdf(um | 0, 100);
-  target += normal_lpdf(us | 0, 100);
+  target += normal_lpdf(hyper_mu_mean | 0, 100);
+  target += normal_lpdf(hyper_mu_lnsd | 0, 100);
 
   // Add the prior for each possible covar effect
   // For now, a weak prior on 0. Putting a stronger prior on 0 requires more
@@ -141,14 +142,14 @@ model {
   for (n in 1:N) {
     // Set the vector for the covariate-corrected hyper-parameters equal to the
     // base hyper-parameters
-    hyper[1] = rm;
-    hyper[2] = rs;
-    hyper[3] = am;
-    hyper[4] = ap;
-    hyper[5] = bm;
-    hyper[6] = bp;
-    hyper[7] = um;
-    hyper[8] = us;
+    hyper[1] = hyper_r_mean;
+    hyper[2] = hyper_r_lnsd;
+    hyper[3] = hyper_a_mean;
+    hyper[4] = hyper_a_lnsd;
+    hyper[5] = hyper_b_mean;
+    hyper[6] = hyper_b_lnsd;
+    hyper[7] = hyper_mu_mean;
+    hyper[8] = hyper_mu_lnsd;
 
     // Reset the effect counter to 0
     ci = 0;
@@ -177,20 +178,20 @@ model {
     // Priors for the parameters
     target += normal_lpdf(r[n]     | hyper[1], hyper[2]);
     target += normal_lpdf(a[n]     | hyper[3], hyper[4]);
-    target += normal_lpdf(b[n]     | hyper[5], hyper[6]);
+    target += normal_lpdf(c[n]     | hyper[5], hyper[6]);
     target += normal_lpdf(ln_mu[n] | hyper[7], hyper[8]);
 
     // The parameters for subject "n"
     ri  = r[n];
     ai  = 1 / (1 + exp(-a[n]));
-    bi  = 1 / (1 + exp(-b[n]));
+    ci  = 1 / (1 + exp(-c[n]));
 
     // To allow convex, then concave, shapes, "bi" must be allowed to be
     // greater than 1, but it still must be less than the second term in the
     // following. Since draws of bi are from a beta distribution, we can
     // multiply bi by this maximum to get a new term that is between 0 and the
     // maximum
-    bi = bi * (1 + 1.0/3.0 * ((ai^2 - ai + 1)/(.5 + ((ai - .5)^2)^.5)));
+    bi = ci * (1 + 1.0/3.0 * ((ai^2 - ai + 1)/(.5 + ((ai - .5)^2)^.5)));
 
     mu = exp(ln_mu[n]);
 
