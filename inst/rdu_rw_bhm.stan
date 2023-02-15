@@ -58,7 +58,7 @@ parameters {
   // parameters (proportional to) the standard deviation of each of r, phi, eta, and mu
   real hyper_r_lnsd;
   real hyper_a_lnsd;
-  real hyper_b_lnsd;
+  real hyper_c_lnsd;
   real hyper_mu_lnsd;
 
   // Arrays of parameters for each subject. Each arrary keeps N parameters, N
@@ -113,8 +113,8 @@ model {
   target += normal_lpdf(hyper_a_lnsd | 0, 100);
 
   // mu and phi for the b distribution
-  target += normal_lpdf(hyper_b_mean | 0, 100);
-  target += normal_lpdf(hyper_b_lnsd | 0, 100);
+  target += normal_lpdf(hyper_c_mean | 0, 100);
+  target += normal_lpdf(hyper_c_lnsd | 0, 100);
 
   // log(mu) mean and standard deviation
   target += normal_lpdf(hyper_mu_mean | 0, 100);
@@ -135,8 +135,8 @@ model {
     hyper[2] = hyper_r_lnsd;
     hyper[3] = hyper_a_mean;
     hyper[4] = hyper_a_lnsd;
-    hyper[5] = hyper_b_mean;
-    hyper[6] = hyper_b_lnsd;
+    hyper[5] = hyper_c_mean;
+    hyper[6] = hyper_c_lnsd;
     hyper[7] = hyper_mu_mean;
     hyper[8] = hyper_mu_lnsd;
 
@@ -177,8 +177,8 @@ model {
 
     // To allow convex, then concave, shapes, "bi" must be allowed to be
     // greater than 1, but it still must be less than the second term in the
-    // following. Since draws of bi are from a beta distribution, we can
-    // multiply bi by this maximum to get a new term that is between 0 and the
+    // following. Since draws of ci are from a logit-normal distribution, we can
+    // multiply ci by this maximum to get a new term that is between 0 and the
     // maximum
     bi = ci * (1 + 1.0/3.0 * ((ai^2 - ai + 1)/(.5 + ((ai - .5)^2)^.5)));
 
