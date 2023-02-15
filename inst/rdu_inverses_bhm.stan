@@ -89,17 +89,6 @@ model {
   // Variable keeping track of the observation
   int i = 0;
 
-  // Variables for cumulative probabilities
-  real pw11;
-  real pw12;
-  real pw13;
-  real pw14;
-
-  real pw21;
-  real pw22;
-  real pw23;
-  real pw24;
-
   // Variables for decision weights
   real dw11;
   real dw12;
@@ -182,25 +171,34 @@ model {
       i += 1;
 
       // Cumulate the probabilities from higest to lowest
-      pw11 = opt1_prob1[i];
-      pw12 = pw11 + opt1_prob2[i];
-      pw13 = pw12 + opt1_prob3[i];
-      pw14 = 1;
+      dw11 = opt1_prob1[i];
+      dw12 = dw11 + opt1_prob2[i];
+      dw13 = dw12 + opt1_prob3[i];
+      dw14 = dw13 + opt1_prob4[i];
 
-      pw21 = opt2_prob1[i];
-      pw22 = pw21 + opt2_prob2[i];
-      pw23 = pw22 + opt2_prob3[i];
-      pw24 = 1;
+      dw21 = opt2_prob1[i];
+      dw22 = dw21 + opt2_prob2[i];
+      dw23 = dw22 + opt2_prob3[i];
+      dw24 = dw23 + opt2_prob4[i];
 
-      // Add the probability weighting function
-      dw11 = pw11^g / (pw11^g + (1 - pw11)^g)^(1 / g);
-      dw12 = pw12^g / (pw12^g + (1 - pw12)^g)^(1 / g);
-      dw13 = pw13^g / (pw13^g + (1 - pw13)^g)^(1 / g);
+      dw11 = dw11 / dw14;
+      dw12 = dw12 / dw14;
+      dw13 = dw13 / dw14;
+      dw14 = dw14 / dw14;
+      dw21 = dw21 / dw24;
+      dw22 = dw22 / dw24;
+      dw23 = dw23 / dw24;
+      dw24 = dw24 / dw24;
+
+      //// Add the probability weighting function
+      dw11 = dw11^g / (dw11^g + (1 - dw11)^g)^(1 / g);
+      dw12 = dw12^g / (dw12^g + (1 - dw12)^g)^(1 / g);
+      dw13 = dw13^g / (dw13^g + (1 - dw13)^g)^(1 / g);
       dw14 = 1;  // Must always be 1 theory-wise
 
-      dw21 = pw21^g / (pw21^g + (1 - pw21)^g)^(1 / g);
-      dw22 = pw22^g / (pw22^g + (1 - pw22)^g)^(1 / g);
-      dw23 = pw23^g / (pw23^g + (1 - pw23)^g)^(1 / g);
+      dw21 = dw21^g / (dw21^g + (1 - dw21)^g)^(1 / g);
+      dw22 = dw22^g / (dw22^g + (1 - dw22)^g)^(1 / g);
+      dw23 = dw23^g / (dw23^g + (1 - dw23)^g)^(1 / g);
       dw24 = 1;  // Must always be 1 theory-wise
 
       // Decumulate the probabilities
@@ -241,3 +239,5 @@ model {
     }
   }
 }
+
+

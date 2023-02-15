@@ -92,17 +92,6 @@ model {
   // Variable keeping track of the observation
   int i = 0;
 
-  // Variables for cumulative probabilities
-  real pw11;
-  real pw12;
-  real pw13;
-  real pw14;
-
-  real pw21;
-  real pw22;
-  real pw23;
-  real pw24;
-
   // Variables for decision weights
   real dw11;
   real dw12;
@@ -200,27 +189,36 @@ model {
       i += 1;
 
       // Cumulate the probabilities from higest to lowest
-      pw11 = opt1_prob1[i];
-      pw12 = pw11 + opt1_prob2[i];
-      pw13 = pw12 + opt1_prob3[i];
-      pw14 = 1;
+      dw11 = opt1_prob1[i];
+      dw12 = dw11 + opt1_prob2[i];
+      dw13 = dw12 + opt1_prob3[i];
+      dw14 = dw13 + opt1_prob4[i];
 
-      pw21 = opt2_prob1[i];
-      pw22 = pw21 + opt2_prob2[i];
-      pw23 = pw22 + opt2_prob3[i];
-      pw24 = 1;
+      dw21 = opt2_prob1[i];
+      dw22 = dw21 + opt2_prob2[i];
+      dw23 = dw22 + opt2_prob3[i];
+      dw24 = dw23 + opt2_prob4[i];
+
+      dw11 = dw11 / dw14;
+      dw12 = dw12 / dw14;
+      dw13 = dw13 / dw14;
+      dw14 = dw14 / dw14;
+      dw21 = dw21 / dw24;
+      dw22 = dw22 / dw24;
+      dw23 = dw23 / dw24;
+      dw24 = dw24 / dw24;
 
       // Add the probability weighting function
       // Riegar & Wang (2006, p. 677)
       dw14 = 1;  // Must always be 1 theory-wise
-      dw13 = pw13 + (pw13^3 - (ai + 1) * pw13^2 + ai * pw13) * (3 - 3 * bi) / (ai^2 - ai + 1);
-      dw12 = pw12 + (pw12^3 - (ai + 1) * pw12^2 + ai * pw12) * (3 - 3 * bi) / (ai^2 - ai + 1);
-      dw11 = pw11 + (pw11^3 - (ai + 1) * pw11^2 + ai * pw11) * (3 - 3 * bi) / (ai^2 - ai + 1);
+      dw13 = dw13 + (dw13^3 - (ai + 1) * dw13^2 + ai * dw13) * (3 - 3 * bi) / (ai^2 - ai + 1);
+      dw12 = dw12 + (dw12^3 - (ai + 1) * dw12^2 + ai * dw12) * (3 - 3 * bi) / (ai^2 - ai + 1);
+      dw11 = dw11 + (dw11^3 - (ai + 1) * dw11^2 + ai * dw11) * (3 - 3 * bi) / (ai^2 - ai + 1);
 
       dw24 = 1;  // Must always be 1 theory-wise
-      dw23 = pw23 + (pw23^3 - (ai + 1) * pw23^2 + ai * pw23) * (3 - 3 * bi) / (ai^2 - ai + 1);
-      dw22 = pw22 + (pw22^3 - (ai + 1) * pw22^2 + ai * pw22) * (3 - 3 * bi) / (ai^2 - ai + 1);
-      dw21 = pw21 + (pw21^3 - (ai + 1) * pw21^2 + ai * pw21) * (3 - 3 * bi) / (ai^2 - ai + 1);
+      dw23 = dw23 + (dw23^3 - (ai + 1) * dw23^2 + ai * dw23) * (3 - 3 * bi) / (ai^2 - ai + 1);
+      dw22 = dw22 + (dw22^3 - (ai + 1) * dw22^2 + ai * dw22) * (3 - 3 * bi) / (ai^2 - ai + 1);
+      dw21 = dw21 + (dw21^3 - (ai + 1) * dw21^2 + ai * dw21) * (3 - 3 * bi) / (ai^2 - ai + 1);
 
       // Decumulate the probabilities
       dw14 -= dw13;
