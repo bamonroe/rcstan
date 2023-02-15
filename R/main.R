@@ -1,4 +1,4 @@
-supported_mods <- c( "eut_bhm", "rdu_power_bhm", "rdu_rw_bhm", "rdu_inverses_bhm")
+supported_mods <- c( "eut_bhm", "rdu_power_bhm", "rdu_rw_bhm", "rdu_inverses_bhm", "rdu_prelec_bhm")
 mod_map <- function(i) supported_mods[i]
 
 covar_split <- function(s) {
