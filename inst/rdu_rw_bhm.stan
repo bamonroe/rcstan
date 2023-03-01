@@ -88,7 +88,7 @@ model {
   // Variable for the utility difference
   real udiff;
   // Variable keeping track of covariate effects
-  int ci = 0;
+  int di = 0;
   // Variable keeping track of the observation
   int i = 0;
 
@@ -123,8 +123,8 @@ model {
   // Add the prior for each possible covar effect
   // For now, a weak prior on 0. Putting a stronger prior on 0 requires more
   // evidence to infer that an effect is really there.
-  for (c in 1:ncovar_est) {
-    target += normal_lpdf(dem[c] | 0, 100);
+  for (d in 1:ncovar_est) {
+    target += normal_lpdf(dem[d] | 0, 100);
   }
 
   // Looping through the subjects
@@ -141,18 +141,18 @@ model {
     hyper[8] = hyper_mu_lnsd;
 
     // Reset the effect counter to 0
-    ci = 0;
+    di = 0;
     // Note that we're cycling through 4 posisble hyper-parameters. This is
     // model dependent, and up to the user to change
     for (h in 1:8) {
       // We're only doing this if the hyper-parameter is being used
       if (nhyper >= h) {
         // Loop through each possible covar to see if it's being applied
-        for (c in 1:ncvars) {
+        for (d in 1:ncvars) {
           // If it is, increment the effect counter, and apply the effect to the hyper-parameter
-          if (cvarmap[c, h] == 1) {
-            ci += 1;
-            hyper[h] += covars[n, c] * dem[ci];
+          if (cvarmap[d, h] == 1) {
+            di += 1;
+            hyper[h] += covars[n, d] * dem[di];
           }
         }
       }
