@@ -1,6 +1,6 @@
 Package: rcstan
 Title: Estimate Standard Risk Preference Models with Stan
-Version: 0.0.1.0
+Version: 0.0.1.1
 Authors@R: 
     person("Monroe", "Brian", , "brianalbertmonroe@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0830-9793"))
@@ -11,8 +11,8 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 Imports:
-    StanHeaders (>= 2.26.16),
-    rstan (>= 2.26.16),
+    StanHeaders (>= 2.26.22),
+    rstan (>= 2.26.22),
 		stringr,
 		coda,
 		haven
