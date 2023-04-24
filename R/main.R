@@ -147,6 +147,10 @@ run_stan <- function(dat, covars, fname, stan_opts = list()) {
   ncovar_est <- covar_nest(csplit)
   cvarmap    <- covar_ucovars(csplit)
   cdat       <- covar_data(csplit, dat)
+  # In Stan, this is declared as a matrix, not a vector, so ensure it's a matrix
+  if (ncvars == 1) {
+    cdat <- matrix(cdat, ncol = 1)
+  }
 
   # Uncomment to help with debugging
   #print(cvarmap)
