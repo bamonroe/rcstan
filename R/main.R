@@ -245,8 +245,10 @@ fit_to_dta <- function(infile, outfile = "post.dta",
   fit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts)
   save(fit, file = paste0(fstub, ".Rda"))
 
-  if (diag) {
+  if (diag && stan_opts$chains > 1) {
     mcmc_diag(fit, fstub)
+  } else if (diag) {
+    warning("Diagnostics set to TRUE, but there are not more than 1 chains estimated, diagnostics will not be run")
   }
 
   # Flatten it to a single matrix
