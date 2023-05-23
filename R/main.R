@@ -200,15 +200,24 @@ mcmc_diag <- function(fit, fstub) {
     gd <- coda::gelman.diag(mlist)
     write.csv(gd["psrf"],  paste0(fstub, "_psrf.csv"))
     write.csv(gd["mpsrf"], paste0(fstub, "_mpsrf.csv"))
-  }, error = function(e) print(e))
+  }, error = function(e) {
+    cat("There was an error running the Gelman diagnostics:\n")
+    print(e)
+  })
   tryCatch({
     val <- coda::autocorr.diag(mlist, lags = seq(from = 1, to = 100, by = 1))
     write.csv(val,  paste0(fstub, "_autocorr.csv"))
-  }, error = function(e) print(e))
+  }, error = function(e) {
+    cat("There was an error running the autocorrelation diagnostics:\n")
+    print(e)
+  })
   tryCatch({
     val <- coda::effectiveSize(mlist)
     write.csv(val,  paste0(fstub, "_effectivesize.csv"))
-  }, error = function(e) print(e))
+  }, error = function(e) {
+    cat("There was an error running the effective size diagnostics:\n")
+    print(e)
+  })
 }
 
 #' Fit a model, flatten it, and write to dta
@@ -245,11 +254,10 @@ fit_to_dta <- function(infile, outfile = "post.dta",
   fit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts)
   save(fit, file = paste0(fstub, ".Rda"))
 
-  if (diag && stan_opts$chains > 1) {
-    mcmc_diag(fit, fstub)
-  } else if (diag) {
-    warning("Diagnostics set to TRUE, but there are not more than 1 chains estimated, diagnostics will not be run")
-  }
+  # Each of the diagnostics are wrapped in tryCatch statements, so we don't need
+  # to check for failure conditions here. We'll just let them fail with their
+  # appropriate error messages iif needed.
+  mcmc_diag(fit, fstub)
 
   # Flatten it to a single matrix
   fit <- flatten_fit(fit)
