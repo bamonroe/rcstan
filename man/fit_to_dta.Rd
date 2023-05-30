@@ -8,9 +8,10 @@ fit_to_dta(
   infile,
   outfile = "post.dta",
   stan_file = NA,
-  covars = NA,
+  covars = "",
   diag = FALSE,
-  stan_opts = list()
+  stan_opts = list(),
+  return_fit = NULL
 )
 }
 \description{

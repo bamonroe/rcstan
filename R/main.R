@@ -93,8 +93,12 @@ check_dat <- function(dat) {
 
 #' @title Esimate the Stan model
 #' @param dat the name of the stan file
+#' @param covars the stata-style string for covars
+#' @param fname the file name of the stan model file
+#' @param stan_opts the list of options to pass directly to stan
+#' @param diag TRUE to run diagnostics
 #' @export
-run_stan <- function(dat, covars, fname, stan_opts = list()) {
+run_stan <- function(dat, covars, fname, stan_opts = list(), diag = FALSE) {
 
   # Make sure the dat passes the checks
   check_dat(dat)
@@ -126,7 +130,7 @@ run_stan <- function(dat, covars, fname, stan_opts = list()) {
     choice = dat$choice
   )
 
-  # Right now, forcing the 2 option, 3 outcome lotteries
+  # Right now, forcing the 2 option, 4 outcome lotteries
   for (val in c("prob", "out")) {
     for (opt in 1:2) {
       for (out in 1:4) {
@@ -169,13 +173,29 @@ run_stan <- function(dat, covars, fname, stan_opts = list()) {
 
   # The fitted model
   fit <- do.call(rstan::stan, stan_opts)
-  fit
+
+  # Save a list object with all the info we've used to generate the fitted object
+  rcfit <- list(
+    fit       = fit,
+    dat       = dat,
+    covars    = covars,
+    fname     = fname,
+    stan_opts = stan_opts
+  )
+
+  # Each of the diagnostics are wrapped in tryCatch statements, so we don't need
+  # to check for failure conditions here. We'll just let them fail with their
+  # appropriate error messages iif needed.
+  if (diag) rcfit <- mcmc_diag(rcfit)
+
+  rcfit
 }
 
 #' Flatten the fitted model
 #' @export
-flatten_fit <- function(fit) {
+flatten_fit <- function(rcfit) {
   # Flatten it to a single matrix
+  fit <- rcfit$fit
   d <- dim(rstan::extract(fit, permuted = FALSE))
   niter   <- d[1]
   nchains <- d[2]
@@ -194,39 +214,73 @@ flatten_fit <- function(fit) {
   fit
 }
 
-mcmc_diag <- function(fit, fstub) {
-  mlist <- rstan::As.mcmc.list(fit)
-  tryCatch({
+mcmc_diag <- function(rcfit, fstub) {
+  # Stubname for saving various CSV files
+  fstub <- strsplit(rcfit$fname, ".stan")[[1]]
+  # Most of this stuff needs an mcmc.list object
+  mlist <- rstan::As.mcmc.list(rcfit$fit)
+
+  # Gelman-Rubin Diagnostic
+  rcfit$gelman_diag <- tryCatch({
+    print("Running Gelman-Rubin diagnostics")
     gd <- coda::gelman.diag(mlist)
     write.csv(gd["psrf"],  paste0(fstub, "_psrf.csv"))
     write.csv(gd["mpsrf"], paste0(fstub, "_mpsrf.csv"))
+    gd
   }, error = function(e) {
     cat("There was an error running the Gelman diagnostics:\n")
     print(e)
+    return(NULL)
   })
-  tryCatch({
+
+  # Autocorrelation statistics
+  rcfit$auto_corr <- tryCatch({
+    print("Calculating autocorrelation")
     val <- coda::autocorr.diag(mlist, lags = seq(from = 1, to = 100, by = 1))
     write.csv(val,  paste0(fstub, "_autocorr.csv"))
+    val
   }, error = function(e) {
     cat("There was an error running the autocorrelation diagnostics:\n")
     print(e)
+    return(NULL)
   })
-  tryCatch({
+
+  # Effective sample sizes
+  rcfit$effective_size <- tryCatch({
+    print("Calculating effective sample size")
     val <- coda::effectiveSize(mlist)
     write.csv(val,  paste0(fstub, "_effectivesize.csv"))
+    val
   }, error = function(e) {
     cat("There was an error running the effective size diagnostics:\n")
     print(e)
+    return(NULL)
   })
+
+  # Estimated marginal likelihood with bridgesampling
+  # Return the bridgesampling fit as part of the diagnostics option
+  rcfit$bridge <- tryCatch({
+    print("Calculating marginal likelihood with bridge sampling")
+    bridgesampling::bridge_sampler(samples = rcfit$fit, silent = TRUE)
+  }, error = function(e) {
+    cat("There was an error running the bridgesampling diagnostics:\n")
+    print(e)
+    return(NULL)
+  })
+
+  return(rcfit)
 }
 
 #' Fit a model, flatten it, and write to dta
 #' @export
-fit_to_dta <- function(infile, outfile = "post.dta",
+fit_to_dta <- function(infile,
+                       outfile = "post.dta",
                        stan_file = NA,
                        covars = "",
                        diag = FALSE,
-                       stan_opts = list()) {
+                       stan_opts = list(),
+                       return_fit = NULL
+                       ) {
 
   # Read in the stata dataset
   dat <- as.data.frame(haven::read_dta(infile))
@@ -247,25 +301,60 @@ fit_to_dta <- function(infile, outfile = "post.dta",
   if (covars == "") {
     covars <- "()"
   }
+
+  # Fit the Stan model and optionally run diagnostics
+  rcfit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts, diag = diag)
+
   # Save the fitted model
   fstub <- strsplit(stan_file, ".stan")[[1]]
 
-  # Fit the Stan model
-  fit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts)
-  save(fit, file = paste0(fstub, ".Rda"))
-
-  # Each of the diagnostics are wrapped in tryCatch statements, so we don't need
-  # to check for failure conditions here. We'll just let them fail with their
-  # appropriate error messages iif needed.
-  mcmc_diag(fit, fstub)
+  # Save the fitted model, options for running, and various collected diagnostics
+  save(rcfit, file = paste0(fstub, ".Rda"))
 
   # Flatten it to a single matrix
-  fit <- flatten_fit(fit)
+  ffit <- flatten_fit(rcfit)
 
   # If given an outfile write it, otherwise return the flattened object
   if (outfile != "") {
-    haven::write_dta(fit, path = outfile)
-  } else {
-    return(fit)
+    haven::write_dta(ffit, path = outfile)
   }
+
+  if (is.null(return_fit)) {
+    return(NULL)
+  }
+  if (return_fit) {
+    return(rcfit)
+  } else {
+    return(ffit)
+  }
+}
+
+#' A helper function to get the bridgesampling objects
+#'
+#' @param rcfit the output of the
+#' @param ... options passed directly to the bridge sampler function
+#' @export billy_goat
+billy_goat <- function(rcfit, ...) {
+
+  # We need to make a 0-iteration fit object with the same model
+  stan_opts <- rcfit$stan_opts
+  stan_opts$warmup <- 0
+  stan_opts$iter   <- 1
+
+  # Fit the Stan model and optionally run diagnostics
+  blank <- run_stan(
+    dat       = rcfit$dat,
+    covars    = rcfit$covars,
+    fname     = rcfit$fname,
+    stan_opts = stan_opts,
+    diag      = FALSE)
+
+  dots <- list(...)
+  # By default don't print the iterations, this can be overriden in the "dots"
+  if (! "silent" %in% names(dots)) dots$silent <- TRUE
+  dots$samples       <- rcfit$fit
+  dots$stanfit_model <- blank$fit
+
+  bs <- do.call(bridgesampling::bridge_sampler, dots)
+  bs
 }

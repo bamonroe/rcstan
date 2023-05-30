@@ -4,7 +4,7 @@
 \alias{flatten_fit}
 \title{Flatten the fitted model}
 \usage{
-flatten_fit(fit)
+flatten_fit(rcfit)
 }
 \description{
 Flatten the fitted model

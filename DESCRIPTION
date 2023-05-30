@@ -11,9 +11,10 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.3
 Imports:
-    StanHeaders (>= 2.26.22),
-    rstan (>= 2.26.22),
-		stringr,
-		coda,
-		haven
+	StanHeaders (>= 2.26.22),
+	rstan (>= 2.26.22),
+	stringr,
+	coda,
+	bridgesampling,
+	haven
 Config/testthat/edition: 3
