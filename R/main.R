@@ -84,7 +84,7 @@ check_dat <- function(dat) {
   rcn <- c("ID", "choice")
   not_present <- ! rcn %in% cn
   if (any(not_present)) {
-    not_present <- paste(not_present, collapse = ", ")
+    not_present <- paste(rcn[not_present], collapse = ", ")
     not_present <- paste0("The following columns are required but not present: ", not_present)
     stop(not_present)
   }
