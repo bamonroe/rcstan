@@ -50,6 +50,40 @@ covar_nest <- function(cvars) {
   count
 }
 
+# Extra variables for use in Stan
+get_extra_vars <- function(stan_data, dat, extra_vars) {
+
+  cnames <- colnames(dat)
+
+  if (is.null(extra_vars)) {
+    return(stan_data)
+  }
+
+  if (! is.character(extra_vars)) {
+    stop("The 'extra_vars' argument needs to be a string")
+  }
+
+  # Extra_vars is a comma separated string,
+  # So split the string to get the variable names that are to be passed to stan
+  extra_vars <- unlist(strsplit(extra_vars, split = ","))
+  extra_vars <- trimws(extra_vars)
+
+  namecheck <- extra_vars %in% cnames
+
+  if (any(!namecheck)) {
+    missing_names <- extra_vars[!namecheck]
+    msg <- paste(missing_names, collapse = ", ")
+    msg <- paste0("The following 'extra_vars' are not in the dataset: ", msg)
+    stop(msg)
+  }
+
+  stan_data$nextra_vars <- as.integer(length(extra_vars))
+  stan_data$extra_vars  <- dat[, extra_vars]
+
+  return(stan_data)
+
+}
+
 
 #' @title Get the raw stan code
 #' @param mod the name of the PWF function
@@ -95,10 +129,12 @@ check_dat <- function(dat) {
 #' @param dat the name of the stan file
 #' @param covars the stata-style string for covars
 #' @param fname the file name of the stan model file
+#' @param extra_vars a string of extra variables to pass to Stan
 #' @param stan_opts the list of options to pass directly to stan
 #' @param diag TRUE to run diagnostics
 #' @export
-run_stan <- function(dat, covars, fname, stan_opts = list(), diag = FALSE) {
+run_stan <- function(dat, covars, fname,
+                     extra_vars = NULL, stan_opts = list(), diag = FALSE) {
 
   # Make sure the dat passes the checks
   check_dat(dat)
@@ -155,6 +191,9 @@ run_stan <- function(dat, covars, fname, stan_opts = list(), diag = FALSE) {
   if (ncvars == 1) {
     cdat <- matrix(cdat, ncol = 1)
   }
+
+  # Handle the extra data
+  stan_data <- get_extra_vars(stan_data, dat, extra_vars)
 
   # Uncomment to help with debugging
   #print(cvarmap)
@@ -278,6 +317,7 @@ fit_to_dta <- function(infile,
                        stan_file = NA,
                        covars = "",
                        diag = FALSE,
+                       extra_vars = NULL,
                        stan_opts = list(),
                        return_fit = NULL
                        ) {
@@ -303,12 +343,19 @@ fit_to_dta <- function(infile,
   }
 
   # Fit the Stan model and optionally run diagnostics
-  rcfit <- run_stan(dat, covars = covars, fname = stan_file, stan_opts = stan_opts, diag = diag)
+  rcfit <- run_stan(dat,
+    covars = covars,
+    fname = stan_file,
+    extra_vars = extra_vars,
+    stan_opts = stan_opts,
+    diag = diag
+  )
 
   # Save the fitted model
   fstub <- strsplit(stan_file, ".stan")[[1]]
 
-  # Save the fitted model, options for running, and various collected diagnostics
+  # Save the fitted model, options for running, and various collected
+  # diagnostics
   save(rcfit, file = paste0(fstub, ".Rda"))
 
   # Flatten it to a single matrix

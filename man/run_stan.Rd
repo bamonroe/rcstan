@@ -4,7 +4,14 @@
 \alias{run_stan}
 \title{Esimate the Stan model}
 \usage{
-run_stan(dat, covars, fname, stan_opts = list(), diag = FALSE)
+run_stan(
+  dat,
+  covars,
+  fname,
+  extra_vars = NULL,
+  stan_opts = list(),
+  diag = FALSE
+)
 }
 \arguments{
 \item{dat}{the name of the stan file}
@@ -12,6 +19,8 @@ run_stan(dat, covars, fname, stan_opts = list(), diag = FALSE)
 \item{covars}{the stata-style string for covars}
 
 \item{fname}{the file name of the stan model file}
+
+\item{extra_vars}{a string of extra variables to pass to Stan}
 
 \item{stan_opts}{the list of options to pass directly to stan}
 
