@@ -78,7 +78,7 @@ get_extra_vars <- function(stan_data, dat, extra_vars) {
   }
 
   stan_data$nextra_vars <- as.integer(length(extra_vars))
-  stan_data$extra_vars  <- dat[, extra_vars]
+  stan_data$extra_vars  <- matrix(dat[, extra_vars], nrow = nrow(dat))
 
   return(stan_data)
 
@@ -262,7 +262,7 @@ mcmc_diag <- function(rcfit, fstub) {
   # Gelman-Rubin Diagnostic
   rcfit$gelman_diag <- tryCatch({
     print("Running Gelman-Rubin diagnostics")
-    gd <- coda::gelman.diag(mlist)
+    gd <- coda::gelman.diag(mlist, multivariate = FALSE)
     write.csv(gd["psrf"],  paste0(fstub, "_psrf.csv"))
     write.csv(gd["mpsrf"], paste0(fstub, "_mpsrf.csv"))
     gd

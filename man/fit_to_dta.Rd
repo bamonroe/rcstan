@@ -10,6 +10,7 @@ fit_to_dta(
   stan_file = NA,
   covars = "",
   diag = FALSE,
+  extra_vars = NULL,
   stan_opts = list(),
   return_fit = NULL
 )
