@@ -59,6 +59,8 @@ get_extra_vars <- function(stan_data, dat, extra_vars) {
     return(stan_data)
   }
 
+  print(extra_vars)
+
   if (! is.character(extra_vars)) {
     stop("The 'extra_vars' argument needs to be a string")
   }
@@ -317,8 +319,8 @@ fit_to_dta <- function(infile,
                        stan_file = NA,
                        covars = "",
                        diag = FALSE,
-                       extra_vars = NULL,
                        stan_opts = list(),
+                       extra_vars = NULL,
                        return_fit = NULL
                        ) {
 
