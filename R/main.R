@@ -266,7 +266,6 @@ mcmc_diag <- function(rcfit, fstub) {
     print("Running Gelman-Rubin diagnostics")
     gd <- coda::gelman.diag(mlist, multivariate = FALSE)
     write.csv(gd["psrf"],  paste0(fstub, "_psrf.csv"))
-    write.csv(gd["mpsrf"], paste0(fstub, "_mpsrf.csv"))
     gd
   }, error = function(e) {
     cat("There was an error running the Gelman diagnostics:\n")
