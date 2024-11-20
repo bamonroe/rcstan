@@ -80,7 +80,11 @@ get_extra_vars <- function(stan_data, dat, extra_vars) {
   }
 
   stan_data$nextra_vars <- as.integer(length(extra_vars))
-  stan_data$extra_vars  <- matrix(dat[, extra_vars], nrow = nrow(dat))
+  stan_data$extra_vars  <- matrix(
+    unlist(dat[, extra_vars]),
+    nrow = nrow(dat),
+    ncol = stan_data$nextra_vars
+  )
 
   return(stan_data)
 
