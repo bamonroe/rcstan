@@ -259,7 +259,9 @@ flatten_fit <- function(rcfit) {
   fit
 }
 
-mcmc_diag <- function(rcfit, fstub) {
+#' Run the diagnostics on a list returned from run_stan
+#' @export
+mcmc_diag <- function(rcfit) {
   # Stubname for saving various CSV files
   fstub <- strsplit(rcfit$fname, ".stan")[[1]]
   # Most of this stuff needs an mcmc.list object
