@@ -25,12 +25,12 @@ data {
   int<lower=0, upper = 1> choice[ndat];
 
   // The probabilities
-  matrix<lower = 0, upper = 1> probs1[ndat, nouts]
-  matrix<lower = 0, upper = 1> probs2[ndat, nouts]
+  matrix[ndat, nouts] probs1;
+  matrix[ndat, nouts] probs2;
 
   // The outcomes
-  matrix outs1[ndat, nouts]
-  matrix outs2[ndat, nouts]
+  matrix[ndat, nouts] outs1;
+  matrix[ndat, nouts] outs2;
 
   // Max and Min outcomes with non-zero probability across the pair
   // this is for Contextual Utility
@@ -255,6 +255,8 @@ model {
       // Calculate the EUT and RDU of the options
       u1_eut = 0;
       u1_rdu = 0;
+      u2_eut = 0;
+      u2_rdu = 0;
       for (out in 1:nouts) {
         // EUT uses probs
         u1_eut += (probs1[i, out] * outs1[i, out]^(1 - ri_eut) / (1 - ri_eut));

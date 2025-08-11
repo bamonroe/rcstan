@@ -152,14 +152,16 @@ run_stan <- function(dat, covars, fname,
 
   cnames <- colnames(dat)
   # Figure out the number of unique options by parsing the column names
-  nopts <- gsub("opt([0-9]+)_out[0-9]+", "\\1", cnames, perl = TRUE)
+  opts <- cnames[grep("opt([0-9]+)_out[0-9]+", cnames, perl = FALSE)]
+  nopts <- gsub("opt([0-9]+)_out[0-9]+", "\\1", opts, perl = FALSE)
   uopts <- sort(unique(nopts))
   nopts <- length(uopts)
 
   # Figure ou the number of prizes associated with each lottery (to be the same
   # for every lottery)
+  outs <- cnames[grep(paste0("opt", uopts[1], "_out([0-9]+)"), cnames, perl = TRUE)]
   nouts <- paste0("opt", uopts[1], "_out([0-9]+)")
-  nouts <- gsub(nouts, "\\1", cnames, perl = TRUE)
+  nouts <- gsub(nouts, "\\1", outs, perl = TRUE)
   uouts <- unique(nouts)
   nouts <- length(uouts)
 
@@ -175,7 +177,7 @@ run_stan <- function(dat, covars, fname,
 
   # We're using the on the fly counts of the number of outcomes and options.
   # It's up to the user to get this right in their code.
-  for (opt in seq_len(nopts)) {
+  for (opt in uopts) {
     soname <- paste0("outs", opt)
     spname <- paste0("probs", opt)
 
@@ -206,10 +208,10 @@ run_stan <- function(dat, covars, fname,
   stan_data <- get_extra_vars(stan_data, dat, extra_vars)
 
   # Uncomment to help with debugging
-  #print(cvarmap)
-  #print(nhyper)
-  #print(ncvars)
-  #print(ncovar_est)
+  print(cvarmap)
+  print(nhyper)
+  print(ncvars)
+  print(ncovar_est)
 
   stan_data$ncovar_est <- ncovar_est
   stan_data$ncvars     <- ncvars
