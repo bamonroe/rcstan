@@ -3,19 +3,18 @@ supported_mods <- c(
   "rdu_power_bhm",
   "rdu_rw_bhm",
   "rdu_inverses_bhm",
-  "rdu_prelec_bhm"
+  "rdu_prelec_bhm",
+  "mix_eut_rdu_pseudo"
 )
 mod_map <- function(i) supported_mods[i]
 
 covar_split <- function(s) {
   m <- unlist(strsplit(s, ")"))
   v <- lapply(m, function(m) {
-
     m <- stringr::str_remove(m, "\\(")
     m <- unlist(stringr::str_split(m, ","))
     m <- stringr::str_squish(m)
     m
-
   })
 }
 
@@ -169,17 +168,22 @@ run_stan <- function(dat, covars, fname,
     N = nsubs,
     T = ntasks,
     ndat = nrow(dat),
+    nopts = nopts,
+    nouts = nouts,
     choice = dat$choice
   )
 
-  # Right now, forcing the 2 option, 4 outcome lotteries
-  for (val in c("prob", "out")) {
-    for (opt in 1:2) {
-      for (out in 1:4) {
-        cname <- paste0("opt", opt, "_", val, out)
-        stan_data[[cname]] <- dat[[cname]]
-      }
-    }
+  # We're using the on the fly counts of the number of outcomes and options.
+  # It's up to the user to get this right in their code.
+  for (opt in seq_len(nopts)) {
+    soname <- paste0("outs", opt)
+    spname <- paste0("probs", opt)
+
+    oname <- paste0("opt", opt, "_out[0-9]+")
+    pname <- paste0("opt", opt, "_prob[0-9]+")
+
+    stan_data[[soname]] <- dat[, grep(pattern = oname, x = cnames, perl = TRUE)]
+    stan_data[[spname]] <- dat[, grep(pattern = pname, x = cnames, perl = TRUE)]
   }
 
   # We add the max and minimum outcomes for Contextual Utility
