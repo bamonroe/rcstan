@@ -71,6 +71,9 @@ transformed data {
   cprob1 = (1.0 - cprob1_c) .* cprob1 + cprob1_c * 0.05;
   cprob2 = (1.0 - cprob2_c) .* cprob2 + cprob2_c * 0.05;
 
+  // We need the number of outcomes minus 1 several times
+  int nouts_m1 = nouts - 1;
+
 }
 
 parameters {
@@ -125,8 +128,8 @@ model {
   int j = 0;
 
   // Variables for the calculated decision weights
-  vector dw1[nouts];
-  vector dw2[nouts];
+  vector[nouts] dw1;
+  vector[nouts] dw2;
 
   // Hyper Prior Distributions
   // r mean and standard deviation
@@ -214,7 +217,7 @@ model {
       i += 1;
 
       // Add the probability weighting function
-      for (out in 1:(nouts - 1)) {
+      for (out in 1:nouts_m1) {
         dw1[out] = cprob1[i, out] + (cprob1[i, out]^3 - (ai + 1) * cprob1[i, out]^2 + ai * cprob1[i, out]) * (3 - 3 * bi) / (ai^2 - ai + 1);
         dw2[out] = cprob2[i, out] + (cprob2[i, out]^3 - (ai + 1) * cprob2[i, out]^2 + ai * cprob2[i, out]) * (3 - 3 * bi) / (ai^2 - ai + 1);
       }
@@ -228,7 +231,7 @@ model {
       }
 
       // Decumulate the probabilities
-      for (out in 1:(nouts - 1) {
+      for (out in 1:nouts_m1) {
         // Stan only does incremental loops, but we need decrement here
         j = (nouts - 1) - out + 1;
 

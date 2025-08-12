@@ -208,10 +208,10 @@ run_stan <- function(dat, covars, fname,
   stan_data <- get_extra_vars(stan_data, dat, extra_vars)
 
   # Uncomment to help with debugging
-  print(cvarmap)
-  print(nhyper)
-  print(ncvars)
-  print(ncovar_est)
+  #print(cvarmap)
+  #print(nhyper)
+  #print(ncvars)
+  #print(ncovar_est)
 
   stan_data$ncovar_est <- ncovar_est
   stan_data$ncvars     <- ncvars
