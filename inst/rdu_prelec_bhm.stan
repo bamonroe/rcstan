@@ -1,10 +1,14 @@
 data {
   // The number of subjects
-  int<lower=0> N;
+  int<lower=1> N;
   // The number of data points by subject
-  int<lower=0> T[N];
+  int<lower=1> T[N];
   // The number of rows of data total
-  int<lower=0> ndat;
+  int<lower=1> ndat;
+  // The number of options in the dataset
+  int<lower=2> nopts;
+  // The number of outcomes in the dataset
+  int<lower=2> nouts;
   // The number of covariate effects to estimate
   int<lower=0> ncovar_est;
   // The number of unique covariates passed across all hyper parameters
@@ -21,31 +25,52 @@ data {
   int<lower=0, upper = 1> choice[ndat];
 
   // The probabilities
-  real<lower = 0, upper = 1> opt1_prob1[ndat];
-  real<lower = 0, upper = 1> opt1_prob2[ndat];
-  real<lower = 0, upper = 1> opt1_prob3[ndat];
-  real<lower = 0, upper = 1> opt1_prob4[ndat];
-
-  real<lower = 0, upper = 1> opt2_prob1[ndat];
-  real<lower = 0, upper = 1> opt2_prob2[ndat];
-  real<lower = 0, upper = 1> opt2_prob3[ndat];
-  real<lower = 0, upper = 1> opt2_prob4[ndat];
+  matrix[ndat, nouts] probs1;
+  matrix[ndat, nouts] probs2;
 
   // The outcomes
-  real opt1_out1[ndat];
-  real opt1_out2[ndat];
-  real opt1_out3[ndat];
-  real opt1_out4[ndat];
-
-  real opt2_out1[ndat];
-  real opt2_out2[ndat];
-  real opt2_out3[ndat];
-  real opt2_out4[ndat];
+  matrix[ndat, nouts] outs1;
+  matrix[ndat, nouts] outs2;
 
   // Max and Min outcomes with non-zero probability across the pair
   // this is for Contextual Utility
   real Max[ndat];
   real Min[ndat];
+}
+
+transformed data {
+
+  // Cumulative probabilities from highest to lowest here.
+  // Doing this operation here allows it to only be calculated once instead of
+  // every time the model is called
+
+  // Initialize the decision weights at the value of the first probability, the
+  // highest outcome
+  matrix[ndat, nouts] cprob1 = rep_matrix(probs1[, 1], nouts);
+  matrix[ndat, nouts] cprob2 = rep_matrix(probs2[, 1], nouts);
+
+  for (kk in 2:nouts) {
+    cprob1[, kk] = cprob1[, kk - 1] + probs1[, kk];
+    cprob2[, kk] = cprob2[, kk - 1] + probs2[, kk];
+  }
+  // Normalize back so they add up to one
+  cprob1 = cprob1 ./ rep_matrix(cprob1[, nouts], nouts);
+  cprob2 = cprob2 ./ rep_matrix(cprob2[, nouts], nouts);
+
+  // Indicator variables for whether a cumulative probability is zero
+  // We need these because the Prelec weighting function is not defined at zero
+  matrix[ndat, nouts] cprob1_c;
+  matrix[ndat, nouts] cprob2_c;
+  for (nn in 1:ndat) {
+    for (kk in 1:nouts) {
+      cprob1_c[nn, kk] = cprob1[nn, kk] == 0 ? 1 : 0;
+      cprob2_c[nn, kk] = cprob2[nn, kk] == 0 ? 1 : 0;
+    }
+  }
+  // Replace the zeros with small numbers.
+  cprob1 = (1.0 - cprob1_c) .* cprob1 + cprob1_c * 0.05;
+  cprob2 = (1.0 - cprob2_c) .* cprob2 + cprob2_c * 0.05;
+
 }
 
 parameters {
@@ -93,28 +118,18 @@ model {
   int ci = 0;
   // Variable keeping track of the observation
   int i = 0;
+  // Variable for use in loops
+  int j = 0;
 
-  // Variables for decision weights
-  real dw11;
-  real dw12;
-  real dw13;
-  real dw14;
+  // Variables for the calculated decision weights
+  vector dw1[nouts];
+  vector dw2[nouts];
 
-  real dw21;
-  real dw22;
-  real dw23;
-  real dw24;
-
-  // Variables for decision weights
-  real dw11_c;
-  real dw12_c;
-  real dw13_c;
-  real dw14_c;
-
-  real dw21_c;
-  real dw22_c;
-  real dw23_c;
-  real dw24_c;
+  // Variables for utilities
+  real u1;
+  real u2;
+  real u_max;
+  real u_min;
 
   // Hyper Prior Distributions
   // r mean and standard deviation
@@ -195,97 +210,42 @@ model {
     for (t in 1:T[n]) {
       i += 1;
 
-      // Cumulate the probabilities from higest to lowest
-      dw11 = opt1_prob1[i];
-      dw12 = dw11 + opt1_prob2[i];
-      dw13 = dw12 + opt1_prob3[i];
-      dw14 = dw13 + opt1_prob4[i];
+      // Add the probability weighting function
+      for (out in 1:(nouts - 1)) {
+        dw1[out] = exp(-eta * (-log(cprob1[i, out]))^phi);
+        dw2[out] = exp(-eta * (-log(cprob2[i, out]))^phi);
+      }
+      dw1[nouts] = 1.0;
+      dw2[nouts] = 1.0;
 
-      dw21 = opt2_prob1[i];
-      dw22 = dw21 + opt2_prob2[i];
-      dw23 = dw22 + opt2_prob3[i];
-      dw24 = dw23 + opt2_prob4[i];
-
-      // Force them to sum to 1
-      // This forcing is practically necessary because of loss of precision when inputting data
-      dw11 = dw11 / dw14;
-      dw12 = dw12 / dw14;
-      dw13 = dw13 / dw14;
-      dw14 = dw14 / dw14;
-      dw21 = dw21 / dw24;
-      dw22 = dw22 / dw24;
-      dw23 = dw23 / dw24;
-      dw24 = dw24 / dw24;
- 
-      dw11_c = dw11 == 0 ? 1 : 0;
-      dw12_c = dw12 == 0 ? 1 : 0;
-      dw13_c = dw13 == 0 ? 1 : 0;
-      dw14_c = dw14 == 0 ? 1 : 0;
-
-      dw21_c = dw21 == 0 ? 1 : 0;
-      dw22_c = dw22 == 0 ? 1 : 0;
-      dw23_c = dw23 == 0 ? 1 : 0;
-      dw24_c = dw24 == 0 ? 1 : 0;
-
-      // If the value is equal to a 0, replace it with a non-zero
-      // We owe special thanks to XXXX for this particular trick
-      dw11 = (1 - dw11_c) * dw11 + dw11_c * 0.05;
-      dw12 = (1 - dw12_c) * dw12 + dw12_c * 0.05;
-      dw13 = (1 - dw13_c) * dw13 + dw13_c * 0.05;
-      dw14 = (1 - dw14_c) * dw14 + dw14_c * 0.05;
-
-      dw21 = (1 - dw21_c) * dw21 + dw21_c * 0.05;
-      dw22 = (1 - dw22_c) * dw22 + dw22_c * 0.05;
-      dw23 = (1 - dw23_c) * dw23 + dw23_c * 0.05;
-      dw24 = (1 - dw24_c) * dw24 + dw24_c * 0.05;
-
-      //// Add the probability weighting function
-      dw11 = exp(-eta * (-log(dw11))^phi);
-      dw12 = exp(-eta * (-log(dw12))^phi);
-      dw13 = exp(-eta * (-log(dw13))^phi);
-      dw14 = 1;
-
-      dw21 = exp(-eta * (-log(dw21))^phi);
-      dw22 = exp(-eta * (-log(dw22))^phi);
-      dw23 = exp(-eta * (-log(dw23))^phi);
-      dw24 = 1;
-
-      // If the value was supposed to equal a 0, replace it with zero
-      dw11 = (1 - dw11_c) * dw11;
-      dw12 = (1 - dw12_c) * dw12;
-      dw13 = (1 - dw13_c) * dw13;
-      dw14 = (1 - dw14_c) * dw14;
-
-      dw21 = (1 - dw21_c) * dw21;
-      dw22 = (1 - dw22_c) * dw22;
-      dw23 = (1 - dw23_c) * dw23;
-      dw24 = (1 - dw24_c) * dw24;
+      // If the values were actually zeros, add the zeros back in
+      for (out in 1:nouts) {
+        dw1[out] = (1 - cprob1_c[i, out]) * dw1[out];
+        dw2[out] = (1 - cprob2_c[i, out]) * dw2[out];
+      }
 
       // Decumulate the probabilities
-      dw14 -= dw13;
-      dw13 -= dw12;
-      dw12 -= dw11;
+      for (out in 1:(nouts - 1) {
+        // Stan only does incremental loops, but we need decrement here
+        j = (nouts - 1) - out + 1;
 
-      dw24 -= dw23;
-      dw23 -= dw22;
-      dw22 -= dw21;
+        dw1[j + 1] -= dw1[j];
+        dw2[j + 1] -= dw2[j];
+      }
 
-      // Note that I'm NOT dividing by r, because this cancels out with Contextual utility
-      // this saves us 7 arithmetic operations PER observation.
-      // Utility of option 1
-      udiff  = opt1_out1[i]^(1 - ri) / (1 - ri) * dw11;
-      udiff += opt1_out2[i]^(1 - ri) / (1 - ri) * dw12;
-      udiff += opt1_out3[i]^(1 - ri) / (1 - ri) * dw13;
-      udiff += opt1_out4[i]^(1 - ri) / (1 - ri) * dw14;
+      // Calculate the EUT and RDU of the options
+      u1 = 0;
+      u2 = 0;
+      for (out in 1:nouts) {
+        // RDU uses dw
+        u1 += (dw1[out] * outs1[i, out]^(1 - ri) / (1 - ri));
+        u2 += (dw2[out] * outs2[i, out]^(1 - ri) / (1 - ri));
+      }
 
-      // Subtracting utility of option 2 in place
-      udiff -= opt2_out1[i]^(1 - ri) / (1 - ri) * dw21;
-      udiff -= opt2_out2[i]^(1 - ri) / (1 - ri) * dw22;
-      udiff -= opt2_out3[i]^(1 - ri) / (1 - ri) * dw23;
-      udiff -= opt2_out4[i]^(1 - ri) / (1 - ri) * dw24;
-
-      // Add Contextual utility
-      udiff = udiff / (Max[i]^(1 - ri) / (1 - ri) - Min[i]^(1 - ri) / (1 - ri));
+      // RDU utility difference using contextual utility
+      u_max = Max[i]^(1 - ri) / (1 - ri);
+      u_min = Min[i]^(1 - ri) / (1 - ri);
+      udiff = (u1 - u2) / (u_max - u_min);
       udiff = udiff / mu;
 
       // Logistic linking function
