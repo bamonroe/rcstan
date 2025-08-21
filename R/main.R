@@ -8,6 +8,24 @@ supported_mods <- c(
 )
 mod_map <- function(i) supported_mods[i]
 
+sanitize_for_stata <- function(df) {
+  # Replace illegal characters with underscore
+  names(df) <- gsub("[^A-Za-z0-9_]", "_", names(df))
+
+  # Make sure names start with a letter or underscore
+  names(df) <- ifelse(grepl("^[A-Za-z_]", names(df)),
+                      names(df),
+                      paste0("v_", names(df)))
+
+  # Truncate to Stata's 32-character limit
+  names(df) <- substr(names(df), 1, 32)
+
+  # Make names unique
+  names(df) <- make.unique(names(df), sep = "_")
+
+  df
+}
+
 covar_split <- function(s) {
   m <- unlist(strsplit(s, ")"))
   v <- lapply(m, function(m) {
@@ -373,6 +391,7 @@ fit_to_dta <- function(infile,
 
   # Flatten it to a single matrix
   ffit <- flatten_fit(rcfit)
+  ffit <- sanitize_for_stata(ffit)
 
   # If given an outfile write it, otherwise return the flattened object
   if (outfile != "") {
